@@ -80,6 +80,11 @@ final class SettingsModel {
 
     func openLoginItems() { launchAtLogin.openLoginItems() }
 
+    func revealCLI() {
+        guard installer.isInstalled else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([installer.commandURL])
+    }
+
     func installCLI() {
         cliError = nil
         do {

@@ -18,7 +18,7 @@ struct CLIInstaller {
     private let endMarker = "# <<< Aster CLI <<<"
     private let executableURL: URL
     private let homeURL: URL
-    private var commandURL: URL { homeURL.appendingPathComponent(".local/bin/aster") }
+    var commandURL: URL { homeURL.appendingPathComponent(".local/bin/aster") }
     private var shellFiles: [URL] {
         [".zprofile", ".zshrc"].map { homeURL.appendingPathComponent($0) }
     }

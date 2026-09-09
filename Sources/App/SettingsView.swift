@@ -66,21 +66,32 @@ private struct CommandLineSettingsSection: View {
 
     var body: some View {
         Section("Command Line") {
-            LabeledContent {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("aster")
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("~/.local/bin/aster")
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                        if model.cliInstalled {
+                            Button("Reveal in Finder", systemImage: "arrow.up.right.square.fill", action: model.revealCLI)
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.plain)
+                                .controlSize(.mini)
+                                .font(.caption)
+                                .help("Reveal in Finder")
+                        }
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 16)
                 if model.cliInstalled {
-                    Button("Uninstall", action: model.uninstallCLI)
+                    Button("Uninstall", role: .destructive, action: model.uninstallCLI)
+                        .tint(.red)
                 } else {
                     Button("Install…", action: model.installCLI)
                 }
-            } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("aster")
-                    Text("~/.local/bin/aster")
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-                .fixedSize(horizontal: false, vertical: true)
             }
             if let error = model.cliError {
                 Text(error)
