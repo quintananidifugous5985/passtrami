@@ -30,7 +30,7 @@ Output is `build/Distribution/vVERSIONbBUILD/`: the app, versioned ZIP, checksum
 After the app and update have passed testing, create and push a tag for the recorded source commit. Use a new version and build for each published archive. Do not replace assets for an existing release.
 
 ```sh
-git tag -s vVERSIONbBUILD -m 'Passtrami VERSION (BUILD)'
+git tag -a vVERSIONbBUILD -m 'Passtrami VERSION (BUILD)'
 git push origin main vVERSIONbBUILD
 gh release create vVERSIONbBUILD --repo zats/passtrami --verify-tag \
   --title 'Passtrami VERSION (BUILD)' --notes-file /path/to/notes.md \
