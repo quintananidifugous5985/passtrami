@@ -49,7 +49,7 @@ PY
 xcodebuild -quiet -exportArchive -archivePath "$work/Passtrami.xcarchive" \
   -exportPath "$work/export" -exportOptionsPlist "$work/export.plist"
 app="$work/export/Passtrami.app"
-requirement="anchor apple generic and certificate leaf[subject.OU] = \"$TEAM_ID\" and certificate leaf[field.1.2.840.113635.100.6.1.13] exists"
+requirement="=anchor apple generic and certificate leaf[subject.OU] = \"$TEAM_ID\" and certificate leaf[field.1.2.840.113635.100.6.1.13] exists"
 codesign --verify --deep --strict -R "$requirement" "$app"
 codesign --verify --strict -R "$requirement" "$app/Contents/Helpers/passtrami"
 for helper in passtrami-engine passtrami-mcp; do
