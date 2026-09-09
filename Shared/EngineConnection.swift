@@ -104,7 +104,7 @@ final class EngineConnection: @unchecked Sendable {
         }
     }
 
-    private func connectSocket() throws -> Int32? {
+    private func connectSocket(deadline: TimeInterval) throws -> Int32? {
         try checkCancellation()
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
@@ -142,7 +142,7 @@ final class EngineConnection: @unchecked Sendable {
         }
         var connectionError: Int32 = result == 0 ? 0 : errno
         if connectionError == EINPROGRESS {
-            do { try wait(socket, events: Int16(POLLOUT), deadline: now + 1) }
+            do { try wait(socket, events: Int16(POLLOUT), deadline: min(deadline, now + 1)) }
             catch is CancellationError { throw CancellationError() }
             catch { return nil }
             var size = socklen_t(MemoryLayout<Int32>.size)
@@ -160,7 +160,8 @@ final class EngineConnection: @unchecked Sendable {
     }
 
     private func connectToEngine() throws -> Int32 {
-        if let socket = try connectSocket() { return socket }
+        let deadline = now + 5
+        if let socket = try connectSocket(deadline: deadline) { return socket }
         guard launchApplication else { throw EngineConnectionError(message: "Aster is not running.") }
         let launcher = Process()
         launcher.executableURL = URL(fileURLWithPath: "/usr/bin/open")
@@ -169,15 +170,14 @@ final class EngineConnection: @unchecked Sendable {
         launcher.standardError = FileHandle.nullDevice
         do { try launcher.run() }
         catch { throw EngineConnectionError(message: "Could not start Aster.") }
-        let deadline = now + 30
         while now < deadline {
             try checkCancellation()
-            if let socket = try connectSocket() { return socket }
+            if let socket = try connectSocket(deadline: deadline) { return socket }
             if !launcher.isRunning, launcher.terminationStatus != 0 {
                 throw EngineConnectionError(message: "Could not open Aster.app. Install and open Aster, then try again.")
             }
             usleep(100_000)
         }
-        throw EngineConnectionError(message: "Aster did not become ready within 30 seconds.")
+        throw EngineConnectionError(message: "Aster did not become ready within 5 seconds.")
     }
 }
