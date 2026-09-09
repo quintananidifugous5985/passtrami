@@ -5,21 +5,21 @@ import SwiftUI
 
 @MainActor
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
-    private static let frameAutosaveName = "Aster.SettingsWindow"
+    private static let frameAutosaveName = "Passtrami.SettingsWindow"
     private let model: SettingsModel
     private let didClose: () -> Void
 
-    init(launchAtLogin: LaunchAtLoginController, onMCPChange: @escaping (Bool) -> Void,
+    init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, onMCPChange: @escaping (Bool) -> Void,
          didClose: @escaping () -> Void) {
         model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
         self.didClose = didClose
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 570),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.contentViewController = NSHostingController(rootView: SettingsView(model: model))
+        window.contentViewController = NSHostingController(rootView: SettingsView(model: model, updates: updates))
         window.title = "\(Bundle.main.displayName) Settings"
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = true
@@ -28,7 +28,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenNone]
         if !window.setFrameUsingName(Self.frameAutosaveName) { window.center() }
-        window.setContentSize(NSSize(width: 550, height: 440))
+        window.setContentSize(NSSize(width: 550, height: 570))
         window.setFrameAutosaveName(Self.frameAutosaveName)
         super.init(window: window)
         window.delegate = self
@@ -98,12 +98,12 @@ final class SettingsModel {
 
     func copyMCPConfiguration() {
         mcpError = nil
-        guard let executable = Bundle.main.resourceURL?.appendingPathComponent("aster-mcp") else {
+        guard let executable = Bundle.main.resourceURL?.appendingPathComponent("passtrami-mcp") else {
             mcpError = "The MCP server is unavailable."
             return
         }
         let configuration: [String: Any] = [
-            "mcpServers": ["aster": ["command": executable.path, "args": [String]()]]
+            "mcpServers": ["passtrami": ["command": executable.path, "args": [String]()]]
         ]
         do {
             let data = try JSONSerialization.data(withJSONObject: configuration, options: [.prettyPrinted, .sortedKeys])

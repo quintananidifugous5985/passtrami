@@ -77,5 +77,5 @@ function onePassword(entries) {
   return entries[0].password;
 }
 
-globalThis.AsterCredentials = { RequestError, normalizeDomain, passwordMessage, accountsMessage, usernamesFrom, credentialsFrom, onePassword };
+globalThis.PasstramiCredentials = { RequestError, normalizeDomain, passwordMessage, accountsMessage, usernamesFrom, credentialsFrom, onePassword };
 })();

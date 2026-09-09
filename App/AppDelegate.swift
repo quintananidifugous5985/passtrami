@@ -5,11 +5,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let engine = EngineProcess()
     private let pinWindow = PINWindow()
     private let launchAtLogin = LaunchAtLoginController()
-    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, onMCPChange: { [weak self] enabled in
+    private lazy var updates = ApplicationUpdates()
+    private var isSettingsVisible = false
+    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, onMCPChange: { [weak self] enabled in
         self?.engine.setMCPEnabled(enabled)
-    }) {
-        NSApp.setActivationPolicy(.accessory)
-        NSApp.deactivate()
+    }) { [weak self] in
+        self?.isSettingsVisible = false
+        self?.updateActivationPolicy()
     }
     private var statusItem: NSStatusItem!
     private let unlockItem = NSMenuItem(title: "Unlock…", action: nil, keyEquivalent: "")
@@ -20,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         launchAtLogin.applyInitialDefaultIfNeeded()
         createMenu()
+        updates.onVisibilityChange = { [weak self] in self?.updateActivationPolicy() }
         engine.onEvent = { [weak self] event in self?.handle(event) }
         pinWindow.onSubmit = { [weak self] pin in self?.engine.send("pin", pin: pin) }
         pinWindow.onCancel = { [weak self] in self?.engine.send("lock") }
@@ -41,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsItem.target = self
         let quit = NSMenuItem(title: "Quit \(Bundle.main.displayName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
-        for item in [unlockItem, lockItem, .separator(), settingsItem, quit] {
+        for item in [unlockItem, lockItem, .separator(), settingsItem, updates.makeMenuItem(), .separator(), quit] {
             menu.addItem(item)
         }
         statusItem.menu = menu
@@ -51,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let mainSettings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         mainSettings.target = self
         appMenu.addItem(mainSettings)
+        appMenu.addItem(updates.makeMenuItem())
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit \(Bundle.main.displayName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
@@ -113,8 +117,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func lock() { engine.send("lock") }
     @objc private func showSettings() {
-        NSApp.setActivationPolicy(.regular)
+        isSettingsVisible = true
+        updateActivationPolicy()
         settings.present()
+    }
+
+    private func updateActivationPolicy() {
+        if isSettingsVisible || updates.isShowingUserInterface {
+            NSApp.setActivationPolicy(.regular)
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+            NSApp.deactivate()
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

@@ -1,6 +1,6 @@
 # PIN dialog reference
 
-Inspected the native arm64e binaries on macOS 27 build 26A5425a in Hopper on 2026-09-09. Aster recreates the layout with its own SwiftUI content and PIN field.
+Inspected the native arm64e binaries on macOS 27 build 26A5425a in Hopper on 2026-09-09. Passtrami recreates the layout with its own SwiftUI content and PIN field.
 
 ## System implementation
 
@@ -19,9 +19,9 @@ Inspected the native arm64e binaries on macOS 27 build 26A5425a in Hopper on 202
 | Icon top / bottom spacing | 8 pt / 16 pt |
 | Badge size / offset | 0.53 × main icon / (7, 0) pt |
 
-`coreautha`'s `-[LAAuthWindow initWithContentRect:styleMask:backing:defer:]` at `0x100001348` removes the resizable bit and adds `0x200008001`: titled, full-size content, and private style bit 33. It sets `titlebarAppearsTransparent`, `titlebarHidden`, and `titleVisibility`, makes the window nonopaque, and hides the window buttons. Aster uses this setup with a nonactivating panel. The system draws the rounded window surface.
+`coreautha`'s `-[LAAuthWindow initWithContentRect:styleMask:backing:defer:]` at `0x100001348` removes the resizable bit and adds `0x200008001`: titled, full-size content, and private style bit 33. It sets `titlebarAppearsTransparent`, `titlebarHidden`, and `titleVisibility`, makes the window nonopaque, and hides the window buttons. Passtrami uses this setup with a nonactivating panel. The system draws the rounded window surface.
 
-## Aster changes
+## Passtrami changes
 
 The main icon is resolved with the Passwords bundle ID (`com.apple.Passwords`) through `NSWorkspace`. The badge comes from `NSApp.applicationIconImage`. Both are loaded each time the PIN window opens.
 

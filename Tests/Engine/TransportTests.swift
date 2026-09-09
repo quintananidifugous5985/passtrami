@@ -78,7 +78,7 @@ private final class TransportTestClient {
 
 @MainActor
 private func runUnixTransportTests() async throws {
-    let directory = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("aster-transport-\(UUID().uuidString)")
+    let directory = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("passtrami-transport-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
                                            attributes: [.posixPermissions: 0o700])
     defer { try? FileManager.default.removeItem(at: directory) }

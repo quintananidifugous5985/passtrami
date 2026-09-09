@@ -50,7 +50,7 @@ final class JavaScriptEngine {
         })
         bridge = listener
         port = try await listener.start()
-        cli = try CLIListener(path: dataDirectory.appendingPathComponent("aster.sock").path, onRequest: { [weak self] id, text in
+        cli = try CLIListener(path: dataDirectory.appendingPathComponent("passtrami.sock").path, onRequest: { [weak self] id, text in
             if self?.mcp?.receive(id, text: text) == true { return }
             self?.deliver(["type": "request", "connection": id, "text": text])
         }, onDisconnect: { [weak self] id in

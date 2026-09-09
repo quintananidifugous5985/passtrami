@@ -79,7 +79,7 @@ private final class RuntimeHTTPFixture {
 @MainActor
 private func runtimeDownloadTest(status: Int = 200, body: String = "abc", hold: Bool = false,
                                  _ test: (URL, URL) async throws -> Void) async throws {
-    let directory = try BrowserRuntime.makePrivateDirectory(in: FileManager.default.temporaryDirectory, prefix: "aster-runtime-test-")
+    let directory = try BrowserRuntime.makePrivateDirectory(in: FileManager.default.temporaryDirectory, prefix: "passtrami-runtime-test-")
     defer { try? FileManager.default.removeItem(at: directory) }
     let server = try RuntimeHTTPFixture(status: status, body: body, hold: hold)
     defer { server.stop() }
@@ -100,7 +100,7 @@ private final class RuntimeDownloadTask {
 @MainActor
 private func runtimeBrowserTest(mode: String) async throws {
     let manager = FileManager.default
-    let root = try BrowserRuntime.makePrivateDirectory(in: manager.temporaryDirectory, prefix: "aster-browser-test-")
+    let root = try BrowserRuntime.makePrivateDirectory(in: manager.temporaryDirectory, prefix: "passtrami-browser-test-")
     defer { try? manager.removeItem(at: root) }
     let data = root.appendingPathComponent("data")
     let resources = root.appendingPathComponent("resources")

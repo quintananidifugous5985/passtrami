@@ -2,7 +2,7 @@
 // Session handling adapted from APW 1.1.1. System operations run in Swift.
 (() => {
   const { RequestError, normalizeDomain, accountsMessage, passwordMessage,
-    usernamesFrom, credentialsFrom, onePassword } = AsterCredentials;
+    usernamesFrom, credentialsFrom, onePassword } = PasstramiCredentials;
   const operations = new Map(), timers = new Map(), candidates = new Map(), clients = new Map();
   const waiters = new Set();
   let sequence = 0, phase = 'starting', phaseMessage, nativeState = '', token = null;
@@ -245,7 +245,7 @@
       pinSubmitted = true; send({ op: 'pin', pin: value.pin });
     }
   }
-  globalThis.Aster = {
+  globalThis.Passtrami = {
     receive(json) {
       const event = JSON.parse(json);
       switch (event.type) {

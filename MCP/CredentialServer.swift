@@ -3,26 +3,26 @@ import Foundation
 import MCP
 
 enum CredentialServer {
-    static let resourceURI = "aster://docs/credential-access"
+    static let resourceURI = "passtrami://docs/credential-access"
     static let instructions = """
-    Read aster://docs/credential-access before using credentials. This server returns account names and
+    Read passtrami://docs/credential-access before using credentials. This server returns account names and
     one-use pipe metadata, never passwords. Prepare the consumer first, then call prepare_password and
     immediately run that consumer. Read the pipe only inside the consuming process; never print, log,
-    inspect, encode, or return its contents through any agent tool. Do not use aster get, cat, shell
+    inspect, encode, or return its contents through any agent tool. Do not use passtrami get, cat, shell
     substitution, or a file-reading tool to obtain a password. Passwords must remain outside model
     messages and session transcripts. Use only the user-authorized website and account. The user
-    completes unlock and system approval in Aster. Revoke unused leases with revoke_password.
+    completes unlock and system approval in Passtrami. Revoke unused leases with revoke_password.
     """
 
     static let guide = """
     # Credential access
 
-    This local MCP server controls Aster. It does not return password values. Enable MCP in Aster
+    This local MCP server controls Passtrami. It does not return password values. Enable MCP in Passtrami
     Settings before calling credential tools. The app starts when needed. The user completes any
-    unlock or system approval in Aster; do not request a PIN or password through MCP.
+    unlock or system approval in Passtrami; do not request a PIN or password through MCP.
 
     ## Complete flow
-    1. Call status. If enabled is false, ask the user to enable MCP in Aster Settings.
+    1. Call status. If enabled is false, ask the user to enable MCP in Passtrami Settings.
     2. Use list_accounts with the intended domain to choose the exact account. Account names are
        metadata and may appear in the transcript. Stay within the user's requested site and account.
     3. Prepare the application code that will use the password. It must accept a pipe path, read its
@@ -62,7 +62,7 @@ enum CredentialServer {
     ```
 
     The agent can run `python3 login.py <returned-path> <username>`. Do not run `cat`, a file reader,
-    `aster get`, or shell substitution on the pipe. Do not put password bytes into an MCP resource.
+    `passtrami get`, or shell substitution on the pipe. Do not put password bytes into an MCP resource.
     A failed, expired, or interrupted read needs a new prepare_password call.
 
     ## Limits
@@ -74,7 +74,7 @@ enum CredentialServer {
     """
 
     static func make(backend: EngineBackend) async -> Server {
-        let server = Server(name: "aster", version: "1.0.0", instructions: instructions,
+        let server = Server(name: "passtrami", version: "1.0.0", instructions: instructions,
                             capabilities: .init(resources: .init(), tools: .init()), configuration: .strict)
         await server.withMethodHandler(ListTools.self) { _ in
             .init(tools: tools)
@@ -140,7 +140,7 @@ enum CredentialServer {
     }
 
     static let tools: [Tool] = [
-        .init(name: "status", description: "Check whether MCP is enabled and whether Aster is locked. No password access.",
+        .init(name: "status", description: "Check whether MCP is enabled and whether Passtrami is locked. No password access.",
               inputSchema: schema([:]), annotations: .init(readOnlyHint: true, openWorldHint: false)),
         .init(name: "list_accounts", description: "List usernames saved for a domain. Waits for user authentication if needed. Returns names only.",
               inputSchema: schema(["domain": ["type": "string", "minLength": 1]]),

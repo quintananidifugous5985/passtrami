@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -euo pipefail
 cd "${0:A:h:h:h}"
-test_dir=$(mktemp -d "${TMPDIR:-/tmp/}aster-engine-tests.XXXXXX")
+test_dir=$(mktemp -d "${TMPDIR:-/tmp/}passtrami-engine-tests.XXXXXX")
 trap 'rm -rf "$test_dir"' EXIT
 sources=(EngineHost/**/*.swift)
 sources=(${sources:#EngineHost/main.swift})

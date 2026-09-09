@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "5A2E607E04C4F8CFF16AA16B"
-               BuildableName = "aster-mcp"
-               BlueprintName = "AsterMCP"
-               ReferencedContainer = "container:Aster.xcodeproj">
+               BuildableName = "passtrami-mcp"
+               BlueprintName = "PasstramiMCP"
+               ReferencedContainer = "container:Passtrami.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>

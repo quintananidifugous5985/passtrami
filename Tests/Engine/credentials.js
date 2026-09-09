@@ -1,5 +1,5 @@
 (() => {
-const { accountsMessage, credentialsFrom, normalizeDomain, onePassword, passwordMessage, RequestError, usernamesFrom } = AsterCredentials;
+const { accountsMessage, credentialsFrom, normalizeDomain, onePassword, passwordMessage, RequestError, usernamesFrom } = PasstramiCredentials;
 
 function assert(value, message = "Assertion failed") {
   if (!value) throw new Error(message);

@@ -29,7 +29,7 @@ final class BrowserRuntime {
     static func runSystemCheck(_ operation: String, command: String, arguments: [String],
                                timeout: Duration = .seconds(30)) async throws -> String {
         try checkCancellation()
-        let directory = try makePrivateDirectory(in: FileManager.default.temporaryDirectory, prefix: "aster-check-")
+        let directory = try makePrivateDirectory(in: FileManager.default.temporaryDirectory, prefix: "passtrami-check-")
         defer { try? FileManager.default.removeItem(at: directory) }
         let outputURL = directory.appendingPathComponent("output")
         let output = try createPrivateFile(outputURL)
@@ -107,7 +107,7 @@ final class BrowserRuntime {
     static func resolve(dataDirectory: URL, progress: @escaping @MainActor (String) -> Void) async throws -> URL {
         try checkCancellation()
         #if !os(macOS) || !arch(arm64)
-        throw EngineFailure("browser_platform", "Aster requires an Apple silicon Mac.")
+        throw EngineFailure("browser_platform", "Passtrami requires an Apple silicon Mac.")
         #else
         let manager = FileManager.default
         let cache = dataDirectory.appendingPathComponent("Browser", isDirectory: true)

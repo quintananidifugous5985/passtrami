@@ -59,7 +59,7 @@ final class BridgeListener {
         let data = Data(text.utf8)
         guard data.count <= 1_048_576 else { disconnect(id: id); return }
         let metadata = NWProtocolWebSocket.Metadata(opcode: .text)
-        let context = NWConnection.ContentContext(identifier: "aster", metadata: [metadata])
+        let context = NWConnection.ContentContext(identifier: "passtrami", metadata: [metadata])
         client.connection.send(content: data, contentContext: context, isComplete: true,
                                completion: .contentProcessed { [weak self] error in
             if error != nil { MainActor.assumeIsolated { self?.disconnect(id: id) } }

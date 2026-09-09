@@ -1,7 +1,7 @@
 import Foundation
 
 let manager = FileManager.default
-let root = manager.temporaryDirectory.appendingPathComponent("aster-installer-\(UUID().uuidString)")
+let root = manager.temporaryDirectory.appendingPathComponent("passtrami-installer-\(UUID().uuidString)")
 try manager.createDirectory(at: root, withIntermediateDirectories: true)
 defer { try? manager.removeItem(at: root) }
 
@@ -9,12 +9,12 @@ func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
     precondition(condition(), message)
 }
 
-let executable = root.appendingPathComponent("helper/aster")
+let executable = root.appendingPathComponent("helper/passtrami")
 try manager.createDirectory(at: executable.deletingLastPathComponent(), withIntermediateDirectories: true)
 try Data("#!/bin/sh\nexit 0\n".utf8).write(to: executable)
 try manager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
 let home = root.appendingPathComponent("home")
-let command = home.appendingPathComponent(".local/bin/aster")
+let command = home.appendingPathComponent(".local/bin/passtrami")
 let installer = CLIInstaller(executableURL: executable, homeURL: home)
 expect(!installer.isInstalled, "Absent shortcut must not be installed")
 try installer.uninstall()
@@ -44,7 +44,7 @@ try Data("other command".utf8).write(to: command)
 try expectConflict()
 expect(manager.fileExists(atPath: command.path), "Uninstall must preserve foreign file")
 try manager.removeItem(at: command)
-let foreign = root.appendingPathComponent("foreign/aster")
+let foreign = root.appendingPathComponent("foreign/passtrami")
 try manager.createDirectory(at: foreign.deletingLastPathComponent(), withIntermediateDirectories: true)
 try Data("foreign target".utf8).write(to: foreign)
 try manager.createSymbolicLink(at: command, withDestinationURL: foreign)
@@ -59,7 +59,7 @@ try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, option
     .write(to: bundleURL.appendingPathComponent("Contents/Info.plist"))
 expect(Bundle(url: bundleURL)!.displayName == "Display Name Test", "Use display name, not internal name")
 
-let defaultsDomain = "io.zats.Aster.MCPTests.\(UUID().uuidString)"
+let defaultsDomain = "io.zats.Passtrami.MCPTests.\(UUID().uuidString)"
 let defaults = UserDefaults(suiteName: defaultsDomain)!
 defer { defaults.removePersistentDomain(forName: defaultsDomain) }
 let mcpSettings = MCPSettings(defaults: defaults)

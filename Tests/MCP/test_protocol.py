@@ -79,7 +79,7 @@ class Engine:
             elif operation == "mcp_list":
                 reply = {"ok": True, "usernames": ["person@example.com"]}
             elif operation == "mcp_prepare":
-                reply = {"ok": True, "lease_id": str(uuid.uuid4()), "path": "/tmp/aster-test/password",
+                reply = {"ok": True, "lease_id": str(uuid.uuid4()), "path": "/tmp/passtrami-test/password",
                          "expires_at": "2099-01-01T00:00:00Z", "format": "utf8", "single_use": True}
                 if domain == "invalid.example":
                     reply["lease_id"] = self.secret
@@ -118,9 +118,9 @@ class Client:
         self.reader = threading.Thread(target=read, daemon=True)
         self.reader.start()
         self.send("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
-                                 "clientInfo": {"name": "aster-test", "version": "1"}}, 1)
+                                 "clientInfo": {"name": "passtrami-test", "version": "1"}}, 1)
         initialized = self.receive(1)["result"]
-        require("aster://docs/credential-access" in initialized["instructions"], "Missing startup instructions")
+        require("passtrami://docs/credential-access" in initialized["instructions"], "Missing startup instructions")
         self.send("notifications/initialized", {})
 
     def send(self, method, params, request_id=None):
@@ -166,7 +166,7 @@ def normal_flow(helper, path, engine):
                 "Wrong tool set")
         client.send("resources/list", {}, 3)
         require(len(client.receive(3)["result"]["resources"]) == 1, "Wrong resource set")
-        client.send("resources/read", {"uri": "aster://docs/credential-access"}, 4)
+        client.send("resources/read", {"uri": "passtrami://docs/credential-access"}, 4)
         guide = client.receive(4)["result"]["contents"][0]["text"]
         require("Do not run `cat`" in guide and "60 seconds" in guide, "Incomplete workflow guide")
         status = client.tool("status", {}, 5)["result"]["structuredContent"]
@@ -192,7 +192,7 @@ def normal_flow(helper, path, engine):
             ("prepare_password", {"domain": "example.com"}), ("revoke_password", {"lease_id": "invalid"}),
         ], 20):
             require("error" in client.tool(tool, arguments, index), "Invalid tool call was accepted")
-        client.send("resources/read", {"uri": "/tmp/aster-test/password"}, 30)
+        client.send("resources/read", {"uri": "/tmp/passtrami-test/password"}, 30)
         require("error" in client.receive(30), "Pipe path accepted as an MCP resource")
 
         engine.closed_session.clear()
@@ -210,7 +210,7 @@ def normal_flow(helper, path, engine):
 
 def main():
     helper = os.path.abspath(sys.argv[1])
-    with tempfile.TemporaryDirectory(prefix="aster-mcp-", dir="/tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="passtrami-mcp-", dir="/tmp") as directory:
         path = directory + "/engine.sock"
         engine = Engine(path)
         try:

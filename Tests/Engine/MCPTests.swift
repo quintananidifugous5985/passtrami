@@ -37,7 +37,7 @@ private final class MCPFixture {
                                cancel: { [unowned self] in cancelled.append($0) })
 
     init(lifetime: Duration = .seconds(60), limit: Int = 16) throws {
-        root = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("aster-mcp-tests-\(UUID().uuidString)")
+        root = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("passtrami-mcp-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false,
                                                 attributes: [.posixPermissions: 0o700])
         pipes = try PasswordPipes(directory: root.appendingPathComponent("pipes"), lifetime: lifetime, limit: limit)

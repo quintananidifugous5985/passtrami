@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Adapted from APW 1.1.1 ext/bridge.js. Runs after Apple's original background.js.
-(function asterBridge() {
-  const { port, token } = self.ASTER_CONFIG;
+(function passtramiBridge() {
+  const { port, token } = self.PASSTRAMI_CONFIG;
   let ws, pending, nativeReady = false;
   const send = (value) => ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify(value));
   const state = () => send({ type: "nativeState", state:

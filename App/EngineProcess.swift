@@ -34,11 +34,11 @@ final class EngineProcess {
         processGeneration = generation
         let stdin = Pipe()
         let stdout = Pipe()
-        child.executableURL = resources.appendingPathComponent("aster-engine")
+        child.executableURL = resources.appendingPathComponent("passtrami-engine")
         child.arguments = [
             "--resources", resources.path,
             "--data-dir", FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Application Support/io.zats.Aster").path
+                .appendingPathComponent("Library/Application Support/io.zats.Passtrami").path
         ]
         child.standardInput = stdin
         child.standardOutput = stdout

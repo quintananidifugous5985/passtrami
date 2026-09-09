@@ -20,10 +20,10 @@ enum CredentialAccessError: Error {
 
     var message: String {
         switch self {
-        case .disabled: "Enable MCP in Aster Settings."
-        case .unavailable: "Could not connect to Aster. Open the app and try again."
-        case .invalidResponse: "Aster returned an invalid response."
-        case .failed: "The credential request failed. Check Aster and try again."
+        case .disabled: "Enable MCP in Passtrami Settings."
+        case .unavailable: "Could not connect to Passtrami. Open the app and try again."
+        case .invalidResponse: "Passtrami returned an invalid response."
+        case .failed: "The credential request failed. Check Passtrami and try again."
         }
     }
 }

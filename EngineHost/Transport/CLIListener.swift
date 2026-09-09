@@ -44,33 +44,33 @@ final class CLIListener {
         address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
         let bytes = Array(path.utf8) + [0]
         guard bytes.count <= MemoryLayout.size(ofValue: address.sun_path) else {
-            throw EngineFailure("socket", "Aster's socket path is too long.")
+            throw EngineFailure("socket", "Passtrami's socket path is too long.")
         }
         withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: bytes) }
 
         var existing = stat()
         if lstat(path, &existing) == 0 {
             guard existing.st_mode & S_IFMT == S_IFSOCK, unlink(path) == 0 else {
-                throw EngineFailure("socket", "Could not remove Aster's old socket.")
+                throw EngineFailure("socket", "Could not remove Passtrami's old socket.")
             }
         } else if errno != ENOENT {
-            throw EngineFailure("socket", "Could not inspect Aster's socket.")
+            throw EngineFailure("socket", "Could not inspect Passtrami's socket.")
         }
 
         let socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        guard socket >= 0 else { throw EngineFailure("socket", "Could not create Aster's socket.") }
+        guard socket >= 0 else { throw EngineFailure("socket", "Could not create Passtrami's socket.") }
         var ready = false
         defer { if !ready { Darwin.close(socket) } }
-        guard Self.configure(socket) else { throw EngineFailure("socket", "Could not configure Aster's socket.") }
+        guard Self.configure(socket) else { throw EngineFailure("socket", "Could not configure Passtrami's socket.") }
         let bound = withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 Darwin.bind(socket, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
-        guard bound == 0 else { throw EngineFailure("socket", "Could not bind Aster's socket.") }
+        guard bound == 0 else { throw EngineFailure("socket", "Could not bind Passtrami's socket.") }
         guard chmod(path, 0o600) == 0, Darwin.listen(socket, 128) == 0 else {
             unlink(path)
-            throw EngineFailure("socket", "Could not listen on Aster's socket.")
+            throw EngineFailure("socket", "Could not listen on Passtrami's socket.")
         }
         descriptor = socket
         let source = DispatchSource.makeReadSource(fileDescriptor: socket, queue: .main)

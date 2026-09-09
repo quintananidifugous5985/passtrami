@@ -5,8 +5,8 @@ struct CLIInstaller {
         case missingExecutable, conflictingCommand, invalidShellFile(String), malformedBlock(String)
         var errorDescription: String? {
             switch self {
-            case .missingExecutable: "The bundled aster command is missing."
-            case .conflictingCommand: "Another command already exists at ~/.local/bin/aster. Move it before changing the CLI installation."
+            case .missingExecutable: "The bundled passtrami command is missing."
+            case .conflictingCommand: "Another command already exists at ~/.local/bin/passtrami. Move it before changing the CLI installation."
             case .invalidShellFile(let name): "Could not read \(name) as a text file."
             case .malformedBlock(let name): "The CLI PATH block in \(name) is incomplete. Correct it before installing."
             }
@@ -14,17 +14,17 @@ struct CLIInstaller {
     }
 
     private let manager = FileManager.default
-    private let startMarker = "# >>> Aster CLI >>>"
-    private let endMarker = "# <<< Aster CLI <<<"
+    private let startMarker = "# >>> Passtrami CLI >>>"
+    private let endMarker = "# <<< Passtrami CLI <<<"
     private let executableURL: URL
     private let homeURL: URL
-    var commandURL: URL { homeURL.appendingPathComponent(".local/bin/aster") }
+    var commandURL: URL { homeURL.appendingPathComponent(".local/bin/passtrami") }
     private var shellFiles: [URL] {
         [".zprofile", ".zshrc"].map { homeURL.appendingPathComponent($0) }
     }
 
     init(
-        executableURL: URL = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/aster"),
+        executableURL: URL = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/passtrami"),
         homeURL: URL = FileManager.default.homeDirectoryForCurrentUser
     ) {
         self.executableURL = executableURL
@@ -32,12 +32,12 @@ struct CLIInstaller {
     }
     private var pathBlock: String {
         """
-        # >>> Aster CLI >>>
+        # >>> Passtrami CLI >>>
         case ":$PATH:" in
           *":$HOME/.local/bin:"*) ;;
           *) export PATH="$HOME/.local/bin:$PATH" ;;
         esac
-        # <<< Aster CLI <<<
+        # <<< Passtrami CLI <<<
         """
     }
 
@@ -91,7 +91,7 @@ struct CLIInstaller {
             if resolved == executableURL.resolvingSymlinksInPath() { return }
             // An existing link to this app can be updated after the app moves.
             let bundleURL = resolved.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            guard resolved.lastPathComponent == "aster",
+            guard resolved.lastPathComponent == "passtrami",
                   let identifier = Bundle.main.bundleIdentifier,
                   Bundle(url: bundleURL)?.bundleIdentifier == identifier else {
                 throw InstallError.conflictingCommand

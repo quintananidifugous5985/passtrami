@@ -7,10 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; };
+		CC0648779E7A4B5F901E21A3 /* Sparkle in Embed Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 6086BAF2C1AD43519A16AB5A /* MCP */; };
-		5369FAAF6A01C8682C47A10E /* AsterMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* AsterMCP */; };
-		7B0510CC02CDE69FF877464B /* AsterCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* AsterCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = D019F1D8C6B2908C54113CCD /* AsterEngine */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5369FAAF6A01C8682C47A10E /* PasstramiMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */; };
+		7B0510CC02CDE69FF877464B /* PasstramiCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* PasstramiCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8349569D03C2C7D437824D2E /* PasstramiEngine in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = D019F1D8C6B2908C54113CCD /* PasstramiEngine */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C3492C30EFC8EF7CFBC941BE /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = A1F139CC6E6255ACF70FAB05 /* MCP */; };
 		E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802A56FBF9D7D8AF4A769C73 /* Harness.swift */; };
 /* End PBXBuildFile section */
@@ -21,33 +23,44 @@
 			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 4426215152A4A4D601B65F1C;
-			remoteInfo = AsterCLI;
+			remoteInfo = PasstramiCLI;
 		};
 		BE5F3539B5C5EE5256902EAD /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 5A2E607E04C4F8CFF16AA16B;
-			remoteInfo = AsterMCP;
+			remoteInfo = PasstramiMCP;
 		};
 		FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 1DCD1B28C505110E467CB2C2;
-			remoteInfo = AsterEngine;
+			remoteInfo = PasstramiEngine;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		CC0648779E7A4B5F901E21A4 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				CC0648779E7A4B5F901E21A3 /* Sparkle in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B4376111945C2EAC17D15D9A /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */,
-				5369FAAF6A01C8682C47A10E /* AsterMCP in Embed Dependencies */,
+				8349569D03C2C7D437824D2E /* PasstramiEngine in Embed Dependencies */,
+				5369FAAF6A01C8682C47A10E /* PasstramiMCP in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -58,7 +71,7 @@
 			dstPath = Contents/Helpers;
 			dstSubfolderSpec = 1;
 			files = (
-				7B0510CC02CDE69FF877464B /* AsterCLI in Embed Dependencies */,
+				7B0510CC02CDE69FF877464B /* PasstramiCLI in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -68,13 +81,13 @@
 /* Begin PBXFileReference section */
 		029FA881CCD882486E5A92AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
-		7FE6811E743DE5CC922F8867 /* AsterCLI */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterCLI; path = aster; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FE6811E743DE5CC922F8867 /* PasstramiCLI */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiCLI; path = passtrami; sourceTree = BUILT_PRODUCTS_DIR; };
 		802A56FBF9D7D8AF4A769C73 /* Harness.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/MCP/Harness.swift; sourceTree = SOURCE_ROOT; };
 		B4710E9398C8906FECD1912E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		C1AEE46C19B149E24D4EABA8 /* AsterMCP */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterMCP; path = "aster-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
-		CB93E85E385AB11CEDE6E577 /* AsterMCPTests */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterMCPTests; path = "aster-mcp-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
-		CDF5B95C40E49420E3973C0D /* Aster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aster.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D019F1D8C6B2908C54113CCD /* AsterEngine */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterEngine; path = "aster-engine"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiMCP; path = "passtrami-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiMCPTests; path = "passtrami-mcp-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDF5B95C40E49420E3973C0D /* Passtrami.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passtrami.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D019F1D8C6B2908C54113CCD /* PasstramiEngine */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiEngine; path = "passtrami-engine"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -165,6 +178,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		CC0648779E7A4B5F901E21A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3CD6C960F30D39895A354FB1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -219,11 +240,11 @@
 		CC27F93FED78DB135292D4E1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CDF5B95C40E49420E3973C0D /* Aster.app */,
-				7FE6811E743DE5CC922F8867 /* AsterCLI */,
-				D019F1D8C6B2908C54113CCD /* AsterEngine */,
-				C1AEE46C19B149E24D4EABA8 /* AsterMCP */,
-				CB93E85E385AB11CEDE6E577 /* AsterMCPTests */,
+				CDF5B95C40E49420E3973C0D /* Passtrami.app */,
+				7FE6811E743DE5CC922F8867 /* PasstramiCLI */,
+				D019F1D8C6B2908C54113CCD /* PasstramiEngine */,
+				C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */,
+				CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -246,9 +267,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1DCD1B28C505110E467CB2C2 /* AsterEngine */ = {
+		1DCD1B28C505110E467CB2C2 /* PasstramiEngine */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "AsterEngine" */;
+			buildConfigurationList = 435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "PasstramiEngine" */;
 			buildPhases = (
 				9A8B46DF07327BB4D89A9918 /* Sources */,
 				97A36100E20F3FE71005C326 /* Resources */,
@@ -260,14 +281,14 @@
 			fileSystemSynchronizedGroups = (
 				125777AB9613392B6AC02548 /* EngineHost */,
 			);
-			name = AsterEngine;
-			productName = AsterEngine;
-			productReference = D019F1D8C6B2908C54113CCD /* AsterEngine */;
+			name = PasstramiEngine;
+			productName = PasstramiEngine;
+			productReference = D019F1D8C6B2908C54113CCD /* PasstramiEngine */;
 			productType = "com.apple.product-type.tool";
 		};
-		4426215152A4A4D601B65F1C /* AsterCLI */ = {
+		4426215152A4A4D601B65F1C /* PasstramiCLI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "AsterCLI" */;
+			buildConfigurationList = 0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "PasstramiCLI" */;
 			buildPhases = (
 				C05AB6518F609A504581BAC4 /* Sources */,
 				5B8A3645A3D69F62BCA2B0E2 /* Resources */,
@@ -280,16 +301,18 @@
 				1D3FB38E8B39D75234F62B6F /* Shared */,
 				7E4F0DA256D1000B91C2A6A2 /* CLI */,
 			);
-			name = AsterCLI;
-			productName = AsterCLI;
-			productReference = 7FE6811E743DE5CC922F8867 /* AsterCLI */;
+			name = PasstramiCLI;
+			productName = PasstramiCLI;
+			productReference = 7FE6811E743DE5CC922F8867 /* PasstramiCLI */;
 			productType = "com.apple.product-type.tool";
 		};
-		54586CC0DD147B6213263959 /* Aster */ = {
+		54586CC0DD147B6213263959 /* Passtrami */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Aster" */;
+			buildConfigurationList = A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Passtrami" */;
 			buildPhases = (
 				66F7E9B4BE075656486E9F63 /* Sources */,
+				CC0648779E7A4B5F901E21A5 /* Frameworks */,
+				CC0648779E7A4B5F901E21A4 /* Embed Frameworks */,
 				195D567251F6F68B69454FC0 /* Resources */,
 				B4376111945C2EAC17D15D9A /* Embed Dependencies */,
 				E5474301CAADB6508D692C78 /* Embed Dependencies */,
@@ -306,14 +329,17 @@
 				9D6EEFFECD5053C98768ED1D /* App */,
 				A810734D4F22BD85D4808402 /* Assets */,
 			);
-			name = Aster;
-			productName = Aster;
-			productReference = CDF5B95C40E49420E3973C0D /* Aster.app */;
+			name = Passtrami;
+			packageProductDependencies = (
+				CC0648779E7A4B5F901E21A2 /* Sparkle */,
+			);
+			productName = Passtrami;
+			productReference = CDF5B95C40E49420E3973C0D /* Passtrami.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5A2E607E04C4F8CFF16AA16B /* AsterMCP */ = {
+		5A2E607E04C4F8CFF16AA16B /* PasstramiMCP */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "AsterMCP" */;
+			buildConfigurationList = 2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "PasstramiMCP" */;
 			buildPhases = (
 				455B37CF067277CB34209154 /* Sources */,
 				3CD6C960F30D39895A354FB1 /* Frameworks */,
@@ -326,17 +352,17 @@
 				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
 				1D3FB38E8B39D75234F62B6F /* Shared */,
 			);
-			name = AsterMCP;
+			name = PasstramiMCP;
 			packageProductDependencies = (
 				6086BAF2C1AD43519A16AB5A /* MCP */,
 			);
-			productName = AsterMCP;
-			productReference = C1AEE46C19B149E24D4EABA8 /* AsterMCP */;
+			productName = PasstramiMCP;
+			productReference = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */;
 			productType = "com.apple.product-type.tool";
 		};
-		8B9C5B52DA01348320BD7332 /* AsterMCPTests */ = {
+		8B9C5B52DA01348320BD7332 /* PasstramiMCPTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "AsterMCPTests" */;
+			buildConfigurationList = 9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "PasstramiMCPTests" */;
 			buildPhases = (
 				1DE25BBEB2789CBF0B06A759 /* Sources */,
 				B6F1E625EDE92EE3367E7485 /* Frameworks */,
@@ -349,12 +375,12 @@
 				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
 				1D3FB38E8B39D75234F62B6F /* Shared */,
 			);
-			name = AsterMCPTests;
+			name = PasstramiMCPTests;
 			packageProductDependencies = (
 				A1F139CC6E6255ACF70FAB05 /* MCP */,
 			);
-			productName = AsterMCPTests;
-			productReference = CB93E85E385AB11CEDE6E577 /* AsterMCPTests */;
+			productName = PasstramiMCPTests;
+			productReference = CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -377,7 +403,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Aster" */;
+			buildConfigurationList = 8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Passtrami" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -387,6 +413,7 @@
 			mainGroup = 8D4C14C33AD6A0093C0F2E92;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -394,11 +421,11 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				54586CC0DD147B6213263959 /* Aster */,
-				4426215152A4A4D601B65F1C /* AsterCLI */,
-				1DCD1B28C505110E467CB2C2 /* AsterEngine */,
-				5A2E607E04C4F8CFF16AA16B /* AsterMCP */,
-				8B9C5B52DA01348320BD7332 /* AsterMCPTests */,
+				54586CC0DD147B6213263959 /* Passtrami */,
+				4426215152A4A4D601B65F1C /* PasstramiCLI */,
+				1DCD1B28C505110E467CB2C2 /* PasstramiEngine */,
+				5A2E607E04C4F8CFF16AA16B /* PasstramiMCP */,
+				8B9C5B52DA01348320BD7332 /* PasstramiMCPTests */,
 			);
 		};
 /* End PBXProject section */
@@ -491,18 +518,18 @@
 /* Begin PBXTargetDependency section */
 		5C6CA845D5ABE11BBEE085CF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1DCD1B28C505110E467CB2C2 /* AsterEngine */;
+			target = 1DCD1B28C505110E467CB2C2 /* PasstramiEngine */;
 			targetProxy = FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */;
 		};
 		A76528B486F9D47523D4A667 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4426215152A4A4D601B65F1C /* AsterCLI */;
+			target = 4426215152A4A4D601B65F1C /* PasstramiCLI */;
 			targetProxy = 96C0730186071B606BCB1348 /* PBXContainerItemProxy */;
 		};
 		B4B66BDB5B12A787FB8BAFB3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = AsterMCP;
-			target = 5A2E607E04C4F8CFF16AA16B /* AsterMCP */;
+			name = PasstramiMCP;
+			target = 5A2E607E04C4F8CFF16AA16B /* PasstramiMCP */;
 			targetProxy = BE5F3539B5C5EE5256902EAD /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -516,8 +543,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.engine;
-				PRODUCT_NAME = "aster-engine";
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.engine;
+				PRODUCT_NAME = "passtrami-engine";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -531,8 +558,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.cli;
-				PRODUCT_NAME = aster;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.cli;
+				PRODUCT_NAME = passtrami;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -546,8 +573,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.cli;
-				PRODUCT_NAME = aster;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.cli;
+				PRODUCT_NAME = passtrami;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -559,11 +586,11 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Aster.mcp-tests";
-				PRODUCT_NAME = "aster-mcp-tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Passtrami.mcp-tests";
+				PRODUCT_NAME = "passtrami-mcp-tests";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ASTER_MCP_TEST";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) PASSTRAMI_MCP_TEST";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
 				SWIFT_VERSION = 6.0;
@@ -584,7 +611,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -595,8 +622,8 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.mcp;
-				PRODUCT_NAME = "aster-mcp";
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.mcp;
+				PRODUCT_NAME = "passtrami-mcp";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -619,7 +646,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -630,11 +657,11 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Aster.mcp-tests";
-				PRODUCT_NAME = "aster-mcp-tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Passtrami.mcp-tests";
+				PRODUCT_NAME = "passtrami-mcp-tests";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ASTER_MCP_TEST";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) PASSTRAMI_MCP_TEST";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
 				SWIFT_VERSION = 6.0;
@@ -647,8 +674,8 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				MACOSX_DEPLOYMENT_TARGET = 26.2;
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.mcp;
-				PRODUCT_NAME = "aster-mcp";
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.mcp;
+				PRODUCT_NAME = "passtrami-mcp";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -796,8 +823,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.engine;
-				PRODUCT_NAME = "aster-engine";
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.engine;
+				PRODUCT_NAME = "passtrami-engine";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -806,7 +833,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "AsterCLI" */ = {
+		0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "PasstramiCLI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0E6EBB0F12D0C2E497085250 /* Debug */,
@@ -815,7 +842,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "AsterMCP" */ = {
+		2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "PasstramiMCP" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7ECF4D3C10AECA3BAC915D85 /* Release */,
@@ -824,7 +851,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "AsterEngine" */ = {
+		435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "PasstramiEngine" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D41AC38052D5BEB95804D8A6 /* Debug */,
@@ -833,7 +860,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Aster" */ = {
+		8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Passtrami" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BB4651D34CFBA453C7237E89 /* Debug */,
@@ -842,7 +869,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "AsterMCPTests" */ = {
+		9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "PasstramiMCPTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9CBBE81399BB328F2B18EB94 /* Release */,
@@ -851,7 +878,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Aster" */ = {
+		A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Passtrami" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6C7CF58F5D050E2EEA7FCB61 /* Debug */,
@@ -863,6 +890,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.6;
+			};
+		};
 		55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
@@ -874,6 +909,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		CC0648779E7A4B5F901E21A2 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		6086BAF2C1AD43519A16AB5A /* MCP */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */;

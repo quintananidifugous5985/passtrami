@@ -8,10 +8,10 @@ struct EngineConnectionError: Error {
 /// A single request to the app-owned engine. Cancellation shuts down the socket;
 /// the request thread keeps ownership of closing its descriptor.
 final class EngineConnection: @unchecked Sendable {
-    static let applicationBundleIdentifier = "io.zats.Aster"
+    static let applicationBundleIdentifier = "io.zats.Passtrami"
     static var socketPath: String {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/\(applicationBundleIdentifier)/aster.sock").path
+            .appendingPathComponent("Library/Application Support/\(applicationBundleIdentifier)/passtrami.sock").path
     }
 
     private let path: String
@@ -53,7 +53,7 @@ final class EngineConnection: @unchecked Sendable {
                 let count = Darwin.write(socket, bytes.baseAddress!.advanced(by: sent), bytes.count - sent)
                 if count > 0 { sent += count }
                 else if count < 0, errno == EINTR || errno == EAGAIN { continue }
-                else { throw EngineConnectionError(message: "Could not send the request to Aster.") }
+                else { throw EngineConnectionError(message: "Could not send the request to Passtrami.") }
             }
         }
 
@@ -65,11 +65,11 @@ final class EngineConnection: @unchecked Sendable {
             if count < 0, errno == EINTR || errno == EAGAIN { continue }
             guard count > 0 else {
                 try checkCancellation()
-                throw EngineConnectionError(message: "Aster closed the connection before it sent a response.")
+                throw EngineConnectionError(message: "Passtrami closed the connection before it sent a response.")
             }
             response.append(contentsOf: buffer.prefix(count))
             guard response.count <= 16 * 1_024 * 1_024 else {
-                throw EngineConnectionError(message: "Aster's response was too large.")
+                throw EngineConnectionError(message: "Passtrami's response was too large.")
             }
             if let newline = response.firstIndex(of: 0x0A) {
                 try checkCancellation()
@@ -88,18 +88,18 @@ final class EngineConnection: @unchecked Sendable {
         while true {
             try checkCancellation()
             let remaining = deadline - now
-            guard remaining > 0 else { throw EngineConnectionError(message: "Timed out waiting for Aster.") }
+            guard remaining > 0 else { throw EngineConnectionError(message: "Timed out waiting for Passtrami.") }
             var item = pollfd(fd: socket, events: events, revents: 0)
             let milliseconds = Int32(min(1_000, max(1, remaining * 1_000)))
             let result = Darwin.poll(&item, 1, milliseconds)
             if result > 0 {
                 guard item.revents & Int16(POLLNVAL) == 0 else {
-                    throw EngineConnectionError(message: "The connection to Aster is no longer valid.")
+                    throw EngineConnectionError(message: "The connection to Passtrami is no longer valid.")
                 }
                 return
             }
             if result < 0, errno != EINTR {
-                throw EngineConnectionError(message: "Could not wait for Aster: \(String(cString: strerror(errno))).")
+                throw EngineConnectionError(message: "Could not wait for Passtrami: \(String(cString: strerror(errno))).")
             }
         }
     }
@@ -111,11 +111,11 @@ final class EngineConnection: @unchecked Sendable {
         address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
         let bytes = Array(path.utf8) + [0]
         guard bytes.count <= MemoryLayout.size(ofValue: address.sun_path) else {
-            throw EngineConnectionError(message: "Aster's socket path is too long.")
+            throw EngineConnectionError(message: "Passtrami's socket path is too long.")
         }
         withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: bytes) }
         let socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        guard socket >= 0 else { throw EngineConnectionError(message: "Could not create a connection to Aster.") }
+        guard socket >= 0 else { throw EngineConnectionError(message: "Could not create a connection to Passtrami.") }
         var connected = false
         defer {
             if !connected {
@@ -133,7 +133,7 @@ final class EngineConnection: @unchecked Sendable {
         guard fcntl(socket, F_SETFD, FD_CLOEXEC) != -1,
               fcntl(socket, F_SETFL, O_NONBLOCK) != -1,
               setsockopt(socket, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size)) == 0 else {
-            throw EngineConnectionError(message: "Could not configure the connection to Aster.")
+            throw EngineConnectionError(message: "Could not configure the connection to Passtrami.")
         }
         let result = withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
@@ -147,7 +147,7 @@ final class EngineConnection: @unchecked Sendable {
             catch { return nil }
             var size = socklen_t(MemoryLayout<Int32>.size)
             guard getsockopt(socket, SOL_SOCKET, SO_ERROR, &connectionError, &size) == 0 else {
-                throw EngineConnectionError(message: "Could not check the connection to Aster.")
+                throw EngineConnectionError(message: "Could not check the connection to Passtrami.")
             }
         }
         if connectionError == 0 {
@@ -156,28 +156,28 @@ final class EngineConnection: @unchecked Sendable {
             return socket
         }
         if [ENOENT, ECONNREFUSED, EAGAIN, EINTR].contains(connectionError) { return nil }
-        throw EngineConnectionError(message: "Could not connect to Aster: \(String(cString: strerror(connectionError))).")
+        throw EngineConnectionError(message: "Could not connect to Passtrami: \(String(cString: strerror(connectionError))).")
     }
 
     private func connectToEngine() throws -> Int32 {
         let deadline = now + 5
         if let socket = try connectSocket(deadline: deadline) { return socket }
-        guard launchApplication else { throw EngineConnectionError(message: "Aster is not running.") }
+        guard launchApplication else { throw EngineConnectionError(message: "Passtrami is not running.") }
         let launcher = Process()
         launcher.executableURL = URL(fileURLWithPath: "/usr/bin/open")
         launcher.arguments = ["-g", "-b", Self.applicationBundleIdentifier]
         launcher.standardOutput = FileHandle.nullDevice
         launcher.standardError = FileHandle.nullDevice
         do { try launcher.run() }
-        catch { throw EngineConnectionError(message: "Could not start Aster.") }
+        catch { throw EngineConnectionError(message: "Could not start Passtrami.") }
         while now < deadline {
             try checkCancellation()
             if let socket = try connectSocket(deadline: deadline) { return socket }
             if !launcher.isRunning, launcher.terminationStatus != 0 {
-                throw EngineConnectionError(message: "Could not open Aster.app. Install and open Aster, then try again.")
+                throw EngineConnectionError(message: "Could not open Passtrami.app. Install and open Passtrami, then try again.")
             }
             usleep(100_000)
         }
-        throw EngineConnectionError(message: "Aster did not become ready within 5 seconds.")
+        throw EngineConnectionError(message: "Passtrami did not become ready within 5 seconds.")
     }
 }

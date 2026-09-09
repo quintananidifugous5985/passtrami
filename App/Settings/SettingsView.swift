@@ -2,12 +2,14 @@ import SwiftUI
 
 struct SettingsView: View {
     let model: SettingsModel
+    let updates: ApplicationUpdates
 
     var body: some View {
         Form {
             StartupSettingsSection(model: model)
             CommandLineSettingsSection(model: model)
             MCPSettingsSection(model: model)
+            UpdatesSettingsSection(updates: updates)
         }
         .formStyle(.grouped)
         .animation(.easeInOut(duration: 0.25), value: model.mcpEnabled)
@@ -18,7 +20,7 @@ struct SettingsView: View {
         .tint(.accentColor)
         .frame(
             minWidth: 480, idealWidth: 550, maxWidth: .infinity,
-            minHeight: 420, idealHeight: 440, maxHeight: .infinity
+            minHeight: 550, idealHeight: 570, maxHeight: .infinity
         )
         .background {
             Color.clear
@@ -70,9 +72,9 @@ private struct CommandLineSettingsSection: View {
         Section("Command Line") {
             HStack(alignment: .center, spacing: 16) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("aster")
+                    Text("passtrami")
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("~/.local/bin/aster")
+                        Text("~/.local/bin/passtrami")
                             .font(.body.monospaced())
                             .textSelection(.enabled)
                         if model.cliInstalled {
@@ -100,7 +102,7 @@ private struct CommandLineSettingsSection: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
             } else if model.didInstallCLI {
-                Text("Open a new terminal to use aster.")
+                Text("Open a new terminal to use passtrami.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -121,7 +123,9 @@ private struct MCPSettingsSection: View {
                         Divider()
                         LabeledContent("Server Configuration") {
                             Button("Copy Configuration", action: model.copyMCPConfiguration)
+                                .fixedSize()
                         }
+                        .frame(minHeight: 44)
                         if let error = model.mcpError {
                             Text(error)
                                 .font(.caption)
@@ -132,11 +136,25 @@ private struct MCPSettingsSection: View {
                     .transition(.opacity)
                 }
             }
-            .clipped()
         } header: {
             Text("MCP")
         } footer: {
             Text("Lets AI agents use passwords without including password values in session transcripts.")
+        }
+    }
+}
+
+private struct UpdatesSettingsSection: View {
+    @Bindable var updates: ApplicationUpdates
+
+    var body: some View {
+        Section("Updates") {
+            Toggle("Check Automatically", isOn: $updates.automaticallyChecksForUpdates)
+                .toggleStyle(.switch)
+            LabeledContent("App Updates") {
+                Button("Check for Updates…", action: updates.checkForUpdates)
+                    .disabled(!updates.canCheckForUpdates)
+            }
         }
     }
 }

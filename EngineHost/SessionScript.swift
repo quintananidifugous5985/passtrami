@@ -30,7 +30,7 @@ final class SessionScript {
                 throw EngineFailure("javascript", "Could not load the password service.")
             }
         }
-        guard let receive = context.objectForKeyedSubscript("Aster")?.objectForKeyedSubscript("receive"),
+        guard let receive = context.objectForKeyedSubscript("Passtrami")?.objectForKeyedSubscript("receive"),
               !receive.isUndefined else {
             throw EngineFailure("javascript", "The password service is incomplete.")
         }

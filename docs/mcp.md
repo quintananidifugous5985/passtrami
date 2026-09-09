@@ -1,6 +1,6 @@
 # MCP access
 
-Enable **Settings → MCP → Enable MCP**, then select **Copy Configuration**. Add that JSON to a client that supports stdio MCP. The helper is `aster-mcp` inside the current app's Resources folder. It starts Aster by bundle identifier when needed. It does not need the CLI shortcut, a network port, or a second password engine.
+Enable **Settings → MCP → Enable MCP**, then select **Copy Configuration**. Add that JSON to a client that supports stdio MCP. The helper is `passtrami-mcp` inside the current app's Resources folder. It starts Passtrami by bundle identifier when needed. It does not need the CLI shortcut, a network port, or a second password engine.
 
 MCP is disabled until enabled in the app. The helper cannot change this setting. Initialization and static documentation remain available while disabled, but account and password access is rejected by the engine. `status` reports the setting without starting authentication.
 
@@ -15,11 +15,11 @@ MCP is disabled until enabled in the app. The helper cannot change this setting.
 
 `prepare_password` uses the same domain matching and exact username check as the CLI. It waits for the existing unlock flow when required. Apple controls authentication; a request does not guarantee a new Touch ID prompt. The tool returns only after it has prepared the password for delivery.
 
-The helper uses the official Swift MCP SDK. It supplies initialization instructions and the static resource `aster://docs/credential-access`. Resource reads cannot access a password pipe. MCP errors use fixed messages, not raw native credential responses.
+The helper uses the official Swift MCP SDK. It supplies initialization instructions and the static resource `passtrami://docs/credential-access`. Resource reads cannot access a password pipe. MCP errors use fixed messages, not raw native credential responses.
 
 ## Agent flow
 
-1. Read `aster://docs/credential-access`.
+1. Read `passtrami://docs/credential-access`.
 2. Call `status`. If disabled, ask the user to enable MCP in Settings.
 3. Call `list_accounts` if the account is not known. Do not guess which account the user wants.
 4. Call `prepare_password` with the domain and exact username. Let the user complete system authentication and the PIN prompt.
@@ -50,4 +50,4 @@ An unused pipe expires after 60 seconds. At most 16 pipes and 16 pending MCP acc
 
 Lock, loss of the unlocked state, browser shutdown, MCP disable, and app shutdown revoke unused pipes. Explicit lock and MCP disable cancel pending MCP requests. A normal helper shutdown revokes its session's leases. If the helper is killed, the 60-second expiry still applies. Engine restart removes stale FIFO paths. A failed metadata response also revokes its pipe.
 
-Once a value is delivered, Aster cannot remove it from the consumer's memory. FIFO permissions do not isolate two processes running as the same user. Multiple readers must not open one lease. This design keeps passwords out of normal MCP messages; it does not stop unrestricted local code from reading a pipe, running `aster get`, or printing a password. Never send the pipe contents to an agent tool result, log, or transcript.
+Once a value is delivered, Passtrami cannot remove it from the consumer's memory. FIFO permissions do not isolate two processes running as the same user. Multiple readers must not open one lease. This design keeps passwords out of normal MCP messages; it does not stop unrestricted local code from reading a pipe, running `passtrami get`, or printing a password. Never send the pipe contents to an agent tool result, log, or transcript.

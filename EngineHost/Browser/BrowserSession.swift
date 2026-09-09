@@ -34,7 +34,7 @@ final class BrowserSession {
             let original = try String(contentsOf: background, encoding: .utf8)
             let bridge = try String(contentsOf: resources.appendingPathComponent("Engine/bridge.js"), encoding: .utf8)
             let config = try JSONSerialization.data(withJSONObject: ["port": port, "token": token], options: [.sortedKeys])
-            let patched = original + "\nself.ASTER_CONFIG=" + String(decoding: config, as: UTF8.self) + ";\n" + bridge + "\n"
+            let patched = original + "\nself.PASSTRAMI_CONFIG=" + String(decoding: config, as: UTF8.self) + ";\n" + bridge + "\n"
             try Data(patched.utf8).write(to: background)
             try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: background.path)
             try checkCancellation()

@@ -1,8 +1,8 @@
 # Browser runtime
 
-Aster uses a pinned, signed Ungoogled Chromium release on Apple silicon. It stores the browser at `~/Library/Application Support/io.zats.Aster/Browser/152.0.7977.82-1.1/Chromium.app`.
+Passtrami uses a pinned, signed Ungoogled Chromium release on Apple silicon. It stores the browser at `~/Library/Application Support/io.zats.Passtrami/Browser/152.0.7977.82-1.1/Chromium.app`.
 
-If the cached browser is missing or fails verification, Aster downloads the pinned [upstream release](https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/tag/152.0.7977.82-1.1). The app bundle does not contain Chromium.
+If the cached browser is missing or fails verification, Passtrami downloads the pinned [upstream release](https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/tag/152.0.7977.82-1.1). The app bundle does not contain Chromium.
 
 | Check | Required value |
 | --- | --- |
@@ -17,13 +17,13 @@ The URL, hash, version, and signing requirement are set in [`EngineHost/Browser/
 
 ## Setup
 
-Aster verifies the downloaded bytes, mounts the image read-only, copies the app to a temporary folder, verifies it, then moves it into the cache. It removes FinderInfo metadata from the copy. It preserves the vendor signature and quarantine metadata. Startup uses system tools and does not require Xcode.
+Passtrami verifies the downloaded bytes, mounts the image read-only, copies the app to a temporary folder, verifies it, then moves it into the cache. It removes FinderInfo metadata from the copy. It preserves the vendor signature and quarantine metadata. Startup uses system tools and does not require Xcode.
 
-The menu bar icon's tooltip shows setup progress. **Cancel Setup** stops the operation, ejects any mounted image, and removes temporary files. A download has a ten-minute limit. A failed system check reports its operation, tool, and exit status in the tooltip and `aster status`, without command output or file paths. Use **Unlock…** to try again.
+The menu bar icon's tooltip shows setup progress. **Cancel Setup** stops the operation, ejects any mounted image, and removes temporary files. A download has a ten-minute limit. A failed system check reports its operation, tool, and exit status in the tooltip and `passtrami status`, without command output or file paths. Use **Unlock…** to try again.
 
 ## Browser session
 
-Each session uses a temporary profile and extension copy. Aster loads the extension through [`Extensions.loadUnpacked`](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/#method-loadUnpacked), then closes the DevTools connection. The full browser runs in headless mode.
+Each session uses a temporary profile and extension copy. Passtrami loads the extension through [`Extensions.loadUnpacked`](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/#method-loadUnpacked), then closes the DevTools connection. The full browser runs in headless mode.
 
 The launch flags in [`EngineHost/Browser/BrowserSession.swift`](../EngineHost/Browser/BrowserSession.swift) disable website and native notifications, DIAL discovery, and the browser's app-copy step for updates. `--use-mock-keychain` prevents a Chromium Safe Storage prompt for the temporary profile. These settings do not replace Apple's password authentication.
 

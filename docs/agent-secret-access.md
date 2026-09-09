@@ -28,16 +28,16 @@ The documentation describes keeping credentials out of the model's normal workfl
 
 - The bundled MCP server initialized and returned eight tool schemas.
 - Desktop authentication succeeded.
-- Creating and listing the isolated `Aster integration test 2026-09-09` Environment succeeded.
+- Creating and listing the isolated `Passtrami integration test 2026-09-09` Environment succeeded.
 - Adding a generated, concealed test variable failed with MCP error `-32603`: `An unexpected error occurred while updating variables`.
 - The account UI showed **Account Frozen**. The Environment remained empty, with no mounted workflows. Editing controls were absent. [Frozen accounts restrict editing and browser filling](https://support.1password.com/frozen-account/).
 
 Secret delivery through the pipe was not tested. The user then limited this work to explaining MCP, so no CLI or SDK credential-read test was performed. No real password was requested or printed. The generated value stayed inside the local test process and was not logged. Test processes were stopped. One empty test Environment remains in 1Password; its editing and deletion controls were unavailable in this account state.
 
-## Implications for Aster
+## Implications for Passtrami
 
-Currently, `aster get` deliberately writes the password to stdout. Calling it directly as an agent tool puts that password in the tool result. Touch ID approval does not change this.
+Currently, `passtrami get` deliberately writes the password to stdout. Calling it directly as an agent tool puts that password in the tool result. Touch ID approval does not change this.
 
-For routine transcript protection, Aster's [MCP interface](mcp.md) delivers a credential through a temporary UNIX pipe and returns only metadata. An agent specifies the website and account. A local program reads the password from the pipe and uses it outside model messages. The pipe permits one delivery, expires after 60 seconds, and is removed on lock, disable, or shutdown.
+For routine transcript protection, Passtrami's [MCP interface](mcp.md) delivers a credential through a temporary UNIX pipe and returns only metadata. An agent specifies the website and account. A local program reads the password from the pipe and uses it outside model messages. The pipe permits one delivery, expires after 60 seconds, and is removed on lock, disable, or shutdown.
 
-For a stronger guarantee, the agent must also be unable to replace the consumer, request raw `get` output, read its memory or input pipe, or change the credential destination. Aster's MCP interface does not enforce that isolation when the agent retains unrestricted local execution.
+For a stronger guarantee, the agent must also be unable to replace the consumer, request raw `get` output, read its memory or input pipe, or change the credential destination. Passtrami's MCP interface does not enforce that isolation when the agent retains unrestricted local execution.

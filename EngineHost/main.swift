@@ -3,7 +3,7 @@ import Foundation
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard arguments.count == 4, arguments[0] == "--resources", arguments[2] == "--data-dir" else {
-    FileHandle.standardError.write(Data("Usage: aster-engine --resources <path> --data-dir <path>\n".utf8))
+    FileHandle.standardError.write(Data("Usage: passtrami-engine --resources <path> --data-dir <path>\n".utf8))
     exit(64)
 }
 let engine = JavaScriptEngine(resources: URL(fileURLWithPath: arguments[1], isDirectory: true),

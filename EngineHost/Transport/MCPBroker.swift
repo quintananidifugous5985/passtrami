@@ -27,7 +27,7 @@ final class MCPBroker {
 
     func setEnabled(_ value: Bool) {
         enabled = value
-        if !value { invalidate(code: "mcp_disabled", message: "Enable MCP in Aster Settings.") }
+        if !value { invalidate(code: "mcp_disabled", message: "Enable MCP in Passtrami Settings.") }
     }
 
     func setState(_ value: String) {
@@ -77,7 +77,7 @@ final class MCPBroker {
             return true
         }
         guard enabled else {
-            send(id, failure("mcp_disabled", "Enable MCP in Aster Settings."))
+            send(id, failure("mcp_disabled", "Enable MCP in Passtrami Settings."))
             return true
         }
         if op == "mcp_revoke" {
@@ -116,7 +116,7 @@ final class MCPBroker {
 
     func receiveReply(_ id: String, text: String) {
         guard let request = pending.removeValue(forKey: id) else { return }
-        guard enabled else { send(id, failure("mcp_disabled", "Enable MCP in Aster Settings.")); return }
+        guard enabled else { send(id, failure("mcp_disabled", "Enable MCP in Passtrami Settings.")); return }
         guard let result = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else {
             send(id, failure("internal", "The password service sent an invalid response.")); return
         }

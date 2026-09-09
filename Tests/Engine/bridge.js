@@ -8,7 +8,7 @@ function bridgeFixture() {
   // Execute the actual bridge with local objects. No sockets or native host are created.
   return new Function(`
     const states = [];
-    const self = { ASTER_CONFIG: { port: 1, token: "test-only" } };
+    const self = { PASSTRAMI_CONFIG: { port: 1, token: "test-only" } };
     let g_theState = "NotInSession", socket;
     function setGlobalState(state) { g_theState = state; }
     function makeNativePort() {
