@@ -14,24 +14,29 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
         self.didClose = didClose
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 570),
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 520),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        window.contentViewController = NSHostingController(rootView: SettingsView(model: model, updates: updates))
         window.title = "\(Bundle.main.displayName) Settings"
-        window.titleVisibility = .visible
+        window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         window.backgroundColor = .clear
         window.isOpaque = false
         window.isReleasedWhenClosed = false
+        window.minSize = NSSize(width: 680, height: 0)
+        window.standardWindowButton(.zoomButton)?.isEnabled = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenNone]
         if !window.setFrameUsingName(Self.frameAutosaveName) { window.center() }
-        window.setContentSize(NSSize(width: 550, height: 570))
         window.setFrameAutosaveName(Self.frameAutosaveName)
         super.init(window: window)
         window.delegate = self
+        window.contentViewController = NSHostingController(rootView: SettingsView(
+            model: model, updates: updates,
+            onContentHeightChange: { [weak self] height in self?.fitContent(height: height) }
+        ))
     }
 
     @available(*, unavailable)
@@ -43,6 +48,19 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
+
+    private func fitContent(height: CGFloat) {
+        guard let window, let contentView = window.contentView else { return }
+        var frame = window.frame
+        let frameHeight = ceil(height + frame.height - contentView.frame.height)
+        guard abs(frame.height - frameHeight) > 1 else { return }
+        frame.origin.y += frame.height - frameHeight
+        frame.size.height = frameHeight
+        window.setFrame(frame, display: true,
+                        animate: window.isVisible && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+    }
+
+    func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool { false }
 
     func windowDidBecomeKey(_ notification: Notification) { model.refresh() }
     func windowWillClose(_ notification: Notification) { didClose() }

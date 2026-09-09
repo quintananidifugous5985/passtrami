@@ -29,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startEngine()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return true
+    }
+
     private func createMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "\(Bundle.main.displayName) is starting")

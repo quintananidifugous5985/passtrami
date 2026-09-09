@@ -3,13 +3,72 @@ import SwiftUI
 struct SettingsView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
+    let onContentHeightChange: (CGFloat) -> Void
+    @AppStorage("settingsPane") private var selectedPane: SettingsPane = .general
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var paneHeights: [SettingsPane: CGFloat] = [:]
+    @State private var sidebarHeight: CGFloat = 0
+
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SettingsSidebar(selection: $selectedPane, onHeightChange: { sidebarHeight = $0 })
+                .navigationSplitViewColumnWidth(min: 210, ideal: 210, max: 210)
+                .background {
+                    SettingsSidebarMaterial()
+                        .ignoresSafeArea()
+                }
+        } detail: {
+            ZStack {
+                ForEach(SettingsPane.allCases) { pane in
+                    SettingsDetailView(pane: pane, model: model, updates: updates) { height in
+                        paneHeights[pane] = height
+                    }
+                    .opacity(selectedPane == pane ? 1 : 0)
+                    .allowsHitTesting(selectedPane == pane)
+                    .accessibilityHidden(selectedPane != pane)
+                    .disabled(selectedPane != pane)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationSplitViewStyle(.balanced)
+        .frame(
+            minWidth: 680, idealWidth: 760, maxWidth: .infinity,
+            maxHeight: .infinity
+        )
+        .onChange(of: paneHeights) { _, _ in reportContentHeight() }
+        .onChange(of: sidebarHeight) { _, _ in reportContentHeight() }
+        .background {
+            Color.clear
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
+                .ignoresSafeArea()
+        }
+    }
+
+    private func reportContentHeight() {
+        guard paneHeights.count == SettingsPane.allCases.count, sidebarHeight > 0 else { return }
+        onContentHeightChange(max(sidebarHeight, paneHeights.values.max() ?? 0))
+    }
+}
+
+private struct SettingsDetailView: View {
+    let pane: SettingsPane
+    let model: SettingsModel
+    let updates: ApplicationUpdates
+    let onHeightChange: (CGFloat) -> Void
 
     var body: some View {
         Form {
-            StartupSettingsSection(model: model)
-            CommandLineSettingsSection(model: model)
-            MCPSettingsSection(model: model)
-            UpdatesSettingsSection(updates: updates)
+            switch pane {
+            case .general:
+                StartupSettingsSection(model: model)
+            case .tools:
+                CommandLineSettingsSection(model: model)
+                MCPSettingsSection(model: model)
+            case .about:
+                AboutSettingsSection()
+                UpdatesSettingsSection(updates: updates)
+            }
         }
         .formStyle(.grouped)
         .animation(.easeInOut(duration: 0.25), value: model.mcpEnabled)
@@ -18,14 +77,10 @@ struct SettingsView: View {
         .buttonStyle(.glassProminent)
         .controlSize(.large)
         .tint(.accentColor)
-        .frame(
-            minWidth: 480, idealWidth: 550, maxWidth: .infinity,
-            minHeight: 550, idealHeight: 570, maxHeight: .infinity
-        )
-        .background {
-            Color.clear
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 16))
-                .ignoresSafeArea()
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            ceil(geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom)
+        } action: { _, height in
+            onHeightChange(height)
         }
     }
 }
@@ -140,6 +195,19 @@ private struct MCPSettingsSection: View {
             Text("MCP")
         } footer: {
             Text("Lets AI agents use passwords without including password values in session transcripts.")
+        }
+    }
+}
+
+private struct AboutSettingsSection: View {
+    var body: some View {
+        Section("About") {
+            LabeledContent("Version", value: Bundle.main.displayVersion)
+            LabeledContent("GitHub") {
+                Link("zats/passtrami", destination: URL(string: "https://github.com/zats/passtrami")!)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
+            }
         }
     }
 }
