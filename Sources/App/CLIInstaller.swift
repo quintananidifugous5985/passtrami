@@ -6,9 +6,9 @@ struct CLIInstaller {
         var errorDescription: String? {
             switch self {
             case .missingExecutable: "The bundled aster command is missing."
-            case .conflictingCommand: "Another command already exists at ~/.local/bin/aster. Move it before installing Aster."
+            case .conflictingCommand: "Another command already exists at ~/.local/bin/aster. Move it before changing the CLI installation."
             case .invalidShellFile(let name): "Could not read \(name) as a text file."
-            case .malformedBlock(let name): "The Aster PATH block in \(name) is incomplete. Correct it before installing."
+            case .malformedBlock(let name): "The CLI PATH block in \(name) is incomplete. Correct it before installing."
             }
         }
     }
@@ -16,10 +16,19 @@ struct CLIInstaller {
     private let manager = FileManager.default
     private let startMarker = "# >>> Aster CLI >>>"
     private let endMarker = "# <<< Aster CLI <<<"
-    private var executableURL: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/aster") }
-    private var commandURL: URL { manager.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/aster") }
+    private let executableURL: URL
+    private let homeURL: URL
+    private var commandURL: URL { homeURL.appendingPathComponent(".local/bin/aster") }
     private var shellFiles: [URL] {
-        [".zprofile", ".zshrc"].map { manager.homeDirectoryForCurrentUser.appendingPathComponent($0) }
+        [".zprofile", ".zshrc"].map { homeURL.appendingPathComponent($0) }
+    }
+
+    init(
+        executableURL: URL = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/aster"),
+        homeURL: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) {
+        self.executableURL = executableURL
+        self.homeURL = homeURL
     }
     private var pathBlock: String {
         """
@@ -35,9 +44,14 @@ struct CLIInstaller {
     var isInstalled: Bool {
         guard let destination = try? manager.destinationOfSymbolicLink(atPath: commandURL.path),
               resolvedLink(destination) == executableURL.resolvingSymlinksInPath() else { return false }
-        return shellFiles.allSatisfy {
-            (try? String(contentsOf: $0, encoding: .utf8).contains(pathBlock)) == true
-        }
+        return true
+    }
+
+    func uninstall() throws {
+        try checkExistingCommand()
+        guard (try? manager.destinationOfSymbolicLink(atPath: commandURL.path)) != nil else { return }
+        // Remove the shortcut, not its target or the shared ~/.local/bin PATH entry.
+        try manager.removeItem(at: commandURL)
     }
 
     func install() throws {
@@ -78,7 +92,8 @@ struct CLIInstaller {
             // An existing link to this app can be updated after the app moves.
             let bundleURL = resolved.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             guard resolved.lastPathComponent == "aster",
-                  Bundle(url: bundleURL)?.bundleIdentifier == Bundle.main.bundleIdentifier else {
+                  let identifier = Bundle.main.bundleIdentifier,
+                  Bundle(url: bundleURL)?.bundleIdentifier == identifier else {
                 throw InstallError.conflictingCommand
             }
             return

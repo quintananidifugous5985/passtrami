@@ -19,7 +19,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             defer: false
         )
         window.contentViewController = NSHostingController(rootView: SettingsView(model: model))
-        window.title = "Aster Settings"
+        window.title = "\(Bundle.main.displayName) Settings"
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = true
         window.backgroundColor = .clear
@@ -51,7 +51,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 @Observable
 final class SettingsModel {
     private let launchAtLogin: LaunchAtLoginController
-    private let installer = CLIInstaller()
+    private let installer: CLIInstaller
     private(set) var loginStatus: SMAppService.Status = .notRegistered
     private(set) var loginError: String?
     private(set) var cliInstalled = false
@@ -66,8 +66,9 @@ final class SettingsModel {
         }
     }
 
-    init(launchAtLogin: LaunchAtLoginController) {
+    init(launchAtLogin: LaunchAtLoginController, installer: CLIInstaller = CLIInstaller()) {
         self.launchAtLogin = launchAtLogin
+        self.installer = installer
     }
 
     func refresh() {
@@ -84,6 +85,17 @@ final class SettingsModel {
         do {
             try installer.install()
             didInstallCLI = true
+            refresh()
+        } catch {
+            cliError = error.localizedDescription
+        }
+    }
+
+    func uninstallCLI() {
+        cliError = nil
+        do {
+            try installer.uninstall()
+            didInstallCLI = false
             refresh()
         } catch {
             cliError = error.localizedDescription

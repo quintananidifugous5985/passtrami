@@ -24,7 +24,7 @@ final class PINWindow: NSObject, NSWindowDelegate, NSTextFieldDelegate {
                           styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, alertStyle],
                           backing: .buffered, defer: false)
         super.init()
-        window.title = "Unlock Aster"
+        window.title = "Unlock \(Bundle.main.displayName)"
         window.titlebarAppearsTransparent = true
         window.setValue(true, forKey: "titlebarHidden")
         window.titleVisibility = .hidden

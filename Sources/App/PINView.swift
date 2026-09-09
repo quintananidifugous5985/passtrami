@@ -54,7 +54,7 @@ private struct PINInstructions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Unlock Aster")
+            Text("Unlock \(Bundle.main.displayName)")
                 .font(.headline)
             if let message {
                 Text(message)

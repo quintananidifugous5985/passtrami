@@ -8,7 +8,7 @@ Place Aster in its intended location and open it. On first launch, it prepares t
 
 **Lock** ends Aster's browser session. It does not lock the system Keychain or the Passwords app. **Unlock…** starts a new session and pairing flow. Quit stops Aster's engine and browser.
 
-In **Settings… → Command Line**, select **Install…**, then open a new terminal window. This creates `~/.local/bin/aster` and adds that folder to PATH in `~/.zprofile` and `~/.zshrc`. **Launch at login** is on by default and can be changed in Settings.
+In **Settings… → Command Line**, select **Install…**, then open a new terminal window. This creates `~/.local/bin/aster` and adds that folder to PATH in `~/.zprofile` and `~/.zshrc`. Once installed, **Uninstall** removes the shortcut. The bundled helper and shared PATH entry remain. **Launch at login** is on by default and can be changed in Settings.
 
 ```sh
 aster get example.com person@example.com
@@ -40,9 +40,11 @@ To make an optimized release:
 ./scripts/build.sh release
 ```
 
-The build script runs the JavaScriptCore, native engine, and CLI tests, then compiles the app, engine, and CLI. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
+The build script runs the JavaScriptCore, native engine, CLI, and app utility tests, then compiles the app, engine, and CLI. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
 
 See [browser runtime](docs/browser-runtime.md) for browser selection and download verification, and [session protocol](docs/session-protocol.md) for pairing and request handling.
+
+See [1Password integration research](docs/agent-secret-access.md) for how other integrations keep secret values out of model responses and the limits of those methods.
 
 ## Attribution
 

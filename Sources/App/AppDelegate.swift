@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func createMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Aster is starting")
+        statusItem.button?.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "\(Bundle.main.displayName) is starting")
         let menu = NSMenu()
         menu.autoenablesItems = false
         unlockItem.target = self
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         lockItem.isEnabled = false
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         settingsItem.target = self
-        let quit = NSMenuItem(title: "Quit Aster", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: "Quit \(Bundle.main.displayName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.target = NSApp
         for item in [unlockItem, lockItem, .separator(), settingsItem, quit] {
             menu.addItem(item)
@@ -45,12 +45,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
         let mainMenu = NSMenu()
         let appItem = NSMenuItem()
-        let appMenu = NSMenu(title: "Aster")
+        let appMenu = NSMenu(title: Bundle.main.displayName)
         let mainSettings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
         mainSettings.target = self
         appMenu.addItem(mainSettings)
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Aster", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit \(Bundle.main.displayName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         mainMenu.addItem(appItem)
         NSApp.mainMenu = mainMenu
@@ -91,9 +91,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .unlocked: label = "Unlocked"
         case .error: label = message ?? "Could not connect"
         }
-        statusItem.button?.toolTip = "Aster: " + label
+        statusItem.button?.toolTip = "\(Bundle.main.displayName): " + label
         statusItem.button?.image = NSImage(systemSymbolName: state == .unlocked ? "lock.open.fill" : "lock.fill",
-                                          accessibilityDescription: "Aster: " + label)
+                                          accessibilityDescription: "\(Bundle.main.displayName): " + label)
         unlockItem.isEnabled = state == .locked || state == .error
         lockItem.title = state == .starting ? "Cancel Setup" : "Lock"
         lockItem.isEnabled = state == .starting || state == .unlocked || state == .pairing

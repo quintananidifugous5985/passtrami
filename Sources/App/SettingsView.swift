@@ -43,7 +43,7 @@ private struct StartupSettingsSection: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if model.loginStatus == .notFound {
-                    Text("Aster could not be found by macOS.")
+                    Text("\(Bundle.main.displayName) could not be found by macOS.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if model.loginStatus != .enabled && model.loginStatus != .notRegistered {
@@ -68,8 +68,7 @@ private struct CommandLineSettingsSection: View {
         Section("Command Line") {
             LabeledContent {
                 if model.cliInstalled {
-                    Text("Installed")
-                        .foregroundStyle(.secondary)
+                    Button("Uninstall", action: model.uninstallCLI)
                 } else {
                     Button("Install…", action: model.installCLI)
                 }

@@ -28,6 +28,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
 Tests/Engine/run.sh
 Tests/CLI/run.sh
+Tests/App/run.sh
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   "${swift_flags[@]}" -target "arm64-apple-macos$minimum_macos" -framework JavaScriptCore -framework Network \
   Sources/Engine/*.swift -o "$app/Contents/Resources/aster-engine"
