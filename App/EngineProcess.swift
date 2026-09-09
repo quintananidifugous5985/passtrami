@@ -19,6 +19,7 @@ final class EngineProcess {
     private var output: Pipe?
     private var pendingOutput = Data()
     private var stopping = false
+    // Ignore output and exit callbacks from an earlier child after a restart.
     private var processGeneration = UUID()
 
     var isRunning: Bool { process?.isRunning == true }

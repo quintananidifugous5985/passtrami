@@ -2,6 +2,7 @@ import Foundation
 import JavaScriptCore
 
 @MainActor
+// The only Swift–JavaScript boundary: JSON events in, native operation messages out.
 final class SessionScript {
     let context: JSContext
     private let receiveFunction: JSValue

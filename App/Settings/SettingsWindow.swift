@@ -14,7 +14,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         self.didClose = didClose
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 550, height: 360),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -25,9 +25,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         window.backgroundColor = .clear
         window.isOpaque = false
         window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 480, height: 300)
-        window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        window.collectionBehavior = [.moveToActiveSpace, .fullScreenNone]
         if !window.setFrameUsingName(Self.frameAutosaveName) { window.center() }
+        window.setContentSize(NSSize(width: 550, height: 360))
         window.setFrameAutosaveName(Self.frameAutosaveName)
         super.init(window: window)
         window.delegate = self

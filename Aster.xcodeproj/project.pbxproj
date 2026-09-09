@@ -1,0 +1,645 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7B0510CC02CDE69FF877464B /* AsterCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* AsterCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = D019F1D8C6B2908C54113CCD /* AsterEngine */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		96C0730186071B606BCB1348 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4426215152A4A4D601B65F1C;
+			remoteInfo = AsterCLI;
+		};
+		FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1DCD1B28C505110E467CB2C2;
+			remoteInfo = AsterEngine;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B4376111945C2EAC17D15D9A /* Embed Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */,
+			);
+			name = "Embed Dependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5474301CAADB6508D692C78 /* Embed Dependencies */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				7B0510CC02CDE69FF877464B /* AsterCLI in Embed Dependencies */,
+			);
+			name = "Embed Dependencies";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		029FA881CCD882486E5A92AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
+		7FE6811E743DE5CC922F8867 /* AsterCLI */ = {isa = PBXFileReference; includeInIndex = 0; path = AsterCLI; sourceTree = BUILT_PRODUCTS_DIR; };
+		B4710E9398C8906FECD1912E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		CDF5B95C40E49420E3973C0D /* Aster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aster.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D019F1D8C6B2908C54113CCD /* AsterEngine */ = {isa = PBXFileReference; includeInIndex = 0; path = AsterEngine; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		125777AB9613392B6AC02548 /* EngineHost */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = EngineHost;
+			sourceTree = "<group>";
+		};
+		7E4F0DA256D1000B91C2A6A2 /* CLI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = CLI;
+			sourceTree = "<group>";
+		};
+		9D6EEFFECD5053C98768ED1D /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A810734D4F22BD85D4808402 /* Assets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Assets;
+			sourceTree = "<group>";
+		};
+		6E5FBFFB187A8BD3A27DEE10 /* Engine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		277E4202639A8AFC1E65CFE8 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		C9458214625DDC4F9CC78016 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		0B4FFC526A61A1A8D5846300 /* docs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = docs;
+			sourceTree = "<group>";
+		};
+		B092B14A287035E633107DF7 /* scripts */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = scripts;
+			sourceTree = "<group>";
+		};
+		D5E9C4D3C7B3F3E3A860CD71 /* Vendor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {};
+			explicitFolders = ();
+			path = Vendor;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXGroup section */
+		8D4C14C33AD6A0093C0F2E92 = {
+			isa = PBXGroup;
+			children = (
+				029FA881CCD882486E5A92AC /* Info.plist */,
+				3FB652E141AC901698F634B2 /* LICENSE */,
+				B4710E9398C8906FECD1912E /* README.md */,
+				9D6EEFFECD5053C98768ED1D /* App */,
+				A810734D4F22BD85D4808402 /* Assets */,
+				7E4F0DA256D1000B91C2A6A2 /* CLI */,
+				125777AB9613392B6AC02548 /* EngineHost */,
+				6E5FBFFB187A8BD3A27DEE10 /* Engine */,
+				277E4202639A8AFC1E65CFE8 /* Resources */,
+				C9458214625DDC4F9CC78016 /* Tests */,
+				0B4FFC526A61A1A8D5846300 /* docs */,
+				B092B14A287035E633107DF7 /* scripts */,
+				D5E9C4D3C7B3F3E3A860CD71 /* Vendor */,
+				CC27F93FED78DB135292D4E1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CC27F93FED78DB135292D4E1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CDF5B95C40E49420E3973C0D /* Aster.app */,
+				7FE6811E743DE5CC922F8867 /* AsterCLI */,
+				D019F1D8C6B2908C54113CCD /* AsterEngine */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1DCD1B28C505110E467CB2C2 /* AsterEngine */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "AsterEngine" */;
+			buildPhases = (
+				9A8B46DF07327BB4D89A9918 /* Sources */,
+				97A36100E20F3FE71005C326 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				125777AB9613392B6AC02548 /* EngineHost */,
+			);
+			name = AsterEngine;
+			packageProductDependencies = (
+			);
+			productName = AsterEngine;
+			productReference = D019F1D8C6B2908C54113CCD /* AsterEngine */;
+			productType = "com.apple.product-type.tool";
+		};
+		4426215152A4A4D601B65F1C /* AsterCLI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "AsterCLI" */;
+			buildPhases = (
+				C05AB6518F609A504581BAC4 /* Sources */,
+				5B8A3645A3D69F62BCA2B0E2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7E4F0DA256D1000B91C2A6A2 /* CLI */,
+			);
+			name = AsterCLI;
+			packageProductDependencies = (
+			);
+			productName = AsterCLI;
+			productReference = 7FE6811E743DE5CC922F8867 /* AsterCLI */;
+			productType = "com.apple.product-type.tool";
+		};
+		54586CC0DD147B6213263959 /* Aster */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Aster" */;
+			buildPhases = (
+				66F7E9B4BE075656486E9F63 /* Sources */,
+				195D567251F6F68B69454FC0 /* Resources */,
+				B4376111945C2EAC17D15D9A /* Embed Dependencies */,
+				E5474301CAADB6508D692C78 /* Embed Dependencies */,
+				78F2B74FF48E98F8B3AEA8C7 /* Bundle engine scripts and notices */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A76528B486F9D47523D4A667 /* PBXTargetDependency */,
+				5C6CA845D5ABE11BBEE085CF /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9D6EEFFECD5053C98768ED1D /* App */,
+				A810734D4F22BD85D4808402 /* Assets */,
+			);
+			name = Aster;
+			packageProductDependencies = (
+			);
+			productName = Aster;
+			productReference = CDF5B95C40E49420E3973C0D /* Aster.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		803B8273E7560208A8C34C3C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					1DCD1B28C505110E467CB2C2 = {
+						ProvisioningStyle = Manual;
+					};
+					4426215152A4A4D601B65F1C = {
+						ProvisioningStyle = Manual;
+					};
+					54586CC0DD147B6213263959 = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Aster" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8D4C14C33AD6A0093C0F2E92;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CC27F93FED78DB135292D4E1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				54586CC0DD147B6213263959 /* Aster */,
+				4426215152A4A4D601B65F1C /* AsterCLI */,
+				1DCD1B28C505110E467CB2C2 /* AsterEngine */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		195D567251F6F68B69454FC0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5B8A3645A3D69F62BCA2B0E2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		97A36100E20F3FE71005C326 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		78F2B74FF48E98F8B3AEA8C7 /* Bundle engine scripts and notices */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle engine scripts and notices";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/zsh\nset -euo pipefail\ncd \"$SRCROOT\"\nresources=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$resources/Engine\" \"$resources/Notices\"\n# Preserve Apple's extension layout; compile only the native targets in Xcode.\nrsync -a Resources/ \"$resources/\" --exclude .DS_Store\ncp Engine/*.js \"$resources/Engine/\"\ncp LICENSE \"$resources/Notices/Aster-GPL-3.0.txt\"\ncp Vendor/APW/README.md \"$resources/Notices/APW.md\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		66F7E9B4BE075656486E9F63 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9A8B46DF07327BB4D89A9918 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C05AB6518F609A504581BAC4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5C6CA845D5ABE11BBEE085CF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1DCD1B28C505110E467CB2C2 /* AsterEngine */;
+			targetProxy = FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */;
+		};
+		A76528B486F9D47523D4A667 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4426215152A4A4D601B65F1C /* AsterCLI */;
+			targetProxy = 96C0730186071B606BCB1348 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		04EF08216786F0DB495FC8BF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.engine;
+				PRODUCT_NAME = "aster-engine";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		07342CADF42F0EEEE98FE670 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.cli;
+				PRODUCT_NAME = aster;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		0E6EBB0F12D0C2E497085250 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.cli;
+				PRODUCT_NAME = aster;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		6C7CF58F5D050E2EEA7FCB61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		9B5D365EBA4FC9AFED908E51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_DEBUG_DYLIB = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		BB4651D34CFBA453C7237E89 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CF9098EB04EEF6B4E290C712 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		D41AC38052D5BEB95804D8A6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.engine;
+				PRODUCT_NAME = "aster-engine";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0C023296C1FE6C6B560DE76D /* Build configuration list for PBXNativeTarget "AsterCLI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E6EBB0F12D0C2E497085250 /* Debug */,
+				07342CADF42F0EEEE98FE670 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "AsterEngine" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D41AC38052D5BEB95804D8A6 /* Debug */,
+				04EF08216786F0DB495FC8BF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8B54EB16271A399839EA7CFF /* Build configuration list for PBXProject "Aster" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB4651D34CFBA453C7237E89 /* Debug */,
+				CF9098EB04EEF6B4E290C712 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Aster" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C7CF58F5D050E2EEA7FCB61 /* Debug */,
+				9B5D365EBA4FC9AFED908E51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 803B8273E7560208A8C34C3C /* Project object */;
+}

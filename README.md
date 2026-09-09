@@ -29,6 +29,8 @@ Pairing does not guarantee a new Touch ID prompt for every request. Apple can re
 
 Requires Xcode 27. The finished app includes the engine and does not require these build tools. Apple's password browser helper must be available on the Mac.
 
+Open `Aster.xcodeproj` and run the **Aster** scheme, or use the script below. Both use the same Xcode targets and build settings. The project uses synchronized folders that follow the layout on disk.
+
 ```sh
 ./scripts/build.sh
 open build/Aster.app
@@ -40,7 +42,9 @@ To make an optimized release:
 ./scripts/build.sh release
 ```
 
-The build script runs the JavaScriptCore, native engine, CLI, and app utility tests, then compiles the app, engine, and CLI. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
+The build script runs the JavaScriptCore, native engine, CLI, and app utility tests, then builds the app and both helpers through Xcode. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
+
+Start with the [native code guide](docs/native-code.md) to follow the entry points, process boundaries, and request flow.
 
 See [browser runtime](docs/browser-runtime.md) for browser selection and download verification, and [session protocol](docs/session-protocol.md) for pairing and request handling.
 

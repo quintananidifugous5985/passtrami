@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 
 @MainActor
+// Owns native I/O. SessionScript decides when to unlock, send requests, or stop.
 final class JavaScriptEngine {
     private let resources: URL
     private let dataDirectory: URL
