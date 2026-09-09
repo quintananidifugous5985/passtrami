@@ -18,7 +18,7 @@ build_number=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Info.plist)
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' Info.plist)
 feed_url=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Info.plist)
 public_key=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Info.plist)
-[[ "$feed_url" == "https://zats.github.io/passtrami/appcast.xml" ]] || { print -u2 'Unexpected update feed URL.'; exit 65; }
+[[ "$feed_url" == "https://zats.io/passtrami/appcast.xml" ]] || { print -u2 'Unexpected update feed URL.'; exit 65; }
 tag="v${version}b${build_number}"
 [[ "$tag" =~ '^v[0-9]+(\.[0-9]+)*b[0-9]+$' ]] || { print -u2 'Invalid version or build number.'; exit 65; }
 output="$project_root/build/Distribution/$tag"

@@ -1,6 +1,6 @@
 # Release Passtrami
 
-The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami/releases). GitHub Pages hosts [appcast.xml](https://zats.github.io/passtrami/appcast.xml). Publishing a stable release starts the feed deployment; no separate website upload is needed. The feed contains the current stable Apple silicon release for macOS 26.2 or later.
+The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami/releases). GitHub Pages hosts [appcast.xml](https://zats.io/passtrami/appcast.xml). Publishing a stable release starts the feed deployment; no separate website upload is needed. The feed contains the current stable Apple silicon release for macOS 26.2 or later.
 
 ## One-time setup
 

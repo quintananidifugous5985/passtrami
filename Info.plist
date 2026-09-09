@@ -12,7 +12,7 @@
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
-  <key>SUFeedURL</key><string>https://zats.github.io/passtrami/appcast.xml</string>
+  <key>SUFeedURL</key><string>https://zats.io/passtrami/appcast.xml</string>
   <key>SUPublicEDKey</key><string>9J/4RHWwpv+4wtcB2pO5C5ic0mZn4c44pk5/MMY8EFc=</string>
   <key>SUEnableAutomaticChecks</key><true/>
   <key>SUAutomaticallyUpdate</key><false/>

@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; };
-		CC0648779E7A4B5F901E21A3 /* Sparkle in Embed Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 6086BAF2C1AD43519A16AB5A /* MCP */; };
 		5369FAAF6A01C8682C47A10E /* PasstramiMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */; };
 		7B0510CC02CDE69FF877464B /* PasstramiCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* PasstramiCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -42,17 +41,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		CC0648779E7A4B5F901E21A4 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				CC0648779E7A4B5F901E21A3 /* Sparkle in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B4376111945C2EAC17D15D9A /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -312,7 +300,6 @@
 			buildPhases = (
 				66F7E9B4BE075656486E9F63 /* Sources */,
 				CC0648779E7A4B5F901E21A5 /* Frameworks */,
-				CC0648779E7A4B5F901E21A4 /* Embed Frameworks */,
 				195D567251F6F68B69454FC0 /* Resources */,
 				B4376111945C2EAC17D15D9A /* Embed Dependencies */,
 				E5474301CAADB6508D692C78 /* Embed Dependencies */,

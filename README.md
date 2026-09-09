@@ -54,7 +54,7 @@ To make an optimized release:
 
 The build script runs the JavaScriptCore, native engine, CLI, app utility, and MCP protocol tests, then builds the app and its helpers through Xcode. Release output is `build/Release/Passtrami.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
 
-For a signed and notarized public release, follow [Release and updates](docs/releasing.md). The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami/releases); its Sparkle feed is published to [GitHub Pages](https://zats.github.io/passtrami/appcast.xml).
+For a signed and notarized public release, follow [Release and updates](docs/releasing.md). The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami/releases); its Sparkle feed is published to [GitHub Pages](https://zats.io/passtrami/appcast.xml).
 
 Start with the [native code guide](docs/native-code.md) to follow the entry points, process boundaries, and request flow.
 
