@@ -173,12 +173,6 @@ private func runtimeBrowserTest(mode: String) async throws {
 
 @MainActor
 func runRuntimeTests() async throws {
-    for version in ["152.0.7977.82", "152.0.7977.83", "152.0.7978.0", "153.0.0.0"] {
-        try runtimeExpect(BrowserRuntime.isCompatibleVersion(version), "Compatible Chromium version was rejected.")
-    }
-    for version in ["151.9.9999.999", "152.0.7977.9", "152.0.7977.81", "152.0.7977", "152.0.7977.82-beta", " 152.0.7977.82", "99999999999999999.0.0.0", "152.0.7977.8e2"] {
-        try runtimeExpect(!BrowserRuntime.isCompatibleVersion(version), "Invalid Chromium version was accepted.")
-    }
     let output = try await BrowserRuntime.runSystemCheck("Test check", command: "/bin/sh", arguments: ["-c", "printf '152.0.7977.82\\n'"])
     try runtimeExpect(output == "152.0.7977.82", "System check changed stdout.")
     do {

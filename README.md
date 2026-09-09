@@ -1,6 +1,6 @@
 # Aster
 
-A menu bar app and CLI for Apple Passwords on Apple silicon Macs running macOS 26.2 or later. Aster uses Apple's password extension in a headless browser. It uses a compatible installed Chromium build or downloads its pinned release when needed.
+A menu bar app and CLI for Apple Passwords on Apple silicon Macs running macOS 26.2 or later. Aster uses Apple's password extension in a headless browser. It downloads and caches a pinned Chromium release.
 
 ## Use
 
@@ -54,7 +54,7 @@ The build script runs the JavaScriptCore, native engine, CLI, app utility, and M
 
 Start with the [native code guide](docs/native-code.md) to follow the entry points, process boundaries, and request flow.
 
-See [browser runtime](docs/browser-runtime.md) for browser selection and download verification, and [session protocol](docs/session-protocol.md) for pairing and request handling.
+See [browser runtime](docs/browser-runtime.md) for browser setup and download verification, and [session protocol](docs/session-protocol.md) for pairing and request handling.
 
 See [1Password integration research](docs/agent-secret-access.md) for how other integrations keep secret values out of model responses and the limits of those methods.
 

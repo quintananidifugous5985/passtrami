@@ -4,24 +4,13 @@ import Foundation
 @MainActor
 final class BrowserRuntime {
     static let release = "152.0.7977.82-1.1"
-    static let minimumVersion = "152.0.7977.82"
+    private static let version = "152.0.7977.82"
     private static let archiveURL = URL(string: "https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/\(release)/ungoogled-chromium_\(release)_arm64-macos.dmg")!
     private static let checksum = "ba673876533e79b3c09edaf3ebd0dadcc29e9d0112b9b843d8c032cfb7bfb457"
     private static let signingRequirement = "=anchor apple generic and identifier \"io.ungoogled-software.ungoogled-chromium\" and certificate leaf[subject.OU] = \"B9A88FL5XJ\""
 
     static func checkCancellation() throws {
         if Task.isCancelled { throw EngineFailure("cancelled", "Browser setup was cancelled.") }
-    }
-
-    static func isCompatibleVersion(_ version: String) -> Bool {
-        let components = version.split(separator: ".", omittingEmptySubsequences: false)
-        guard components.count == 4,
-              components.allSatisfy({ !$0.isEmpty && $0.utf8.allSatisfy { $0 >= 48 && $0 <= 57 } }) else { return false }
-        let actual = components.compactMap { UInt64($0) }
-        guard actual.count == 4, actual.allSatisfy({ $0 <= 9_007_199_254_740_991 }) else { return false }
-        let required = minimumVersion.split(separator: ".").map { UInt64($0)! }
-        for (value, minimum) in zip(actual, required) where value != minimum { return value > minimum }
-        return true
     }
 
     static func makePrivateDirectory(in parent: URL, prefix: String) throws -> URL {
@@ -70,7 +59,7 @@ final class BrowserRuntime {
         return String(decoding: try Data(contentsOf: outputURL), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func validate(_ app: URL, pinned: Bool = false) async throws -> URL {
+    private static func validate(_ app: URL) async throws -> URL {
         try checkCancellation()
         let executable = app.appendingPathComponent("Contents/MacOS/Chromium")
         let attributes = try FileManager.default.attributesOfItem(atPath: executable.path)
@@ -78,9 +67,9 @@ final class BrowserRuntime {
               FileManager.default.isExecutableFile(atPath: executable.path) else {
             throw EngineFailure("browser_verify", "The Chromium executable is missing.")
         }
-        let version = try await runSystemCheck("Chromium version check", command: "/usr/bin/plutil",
+        let actualVersion = try await runSystemCheck("Chromium version check", command: "/usr/bin/plutil",
             arguments: ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", app.appendingPathComponent("Contents/Info.plist").path])
-        guard isCompatibleVersion(version), !pinned || version == minimumVersion else {
+        guard actualVersion == version else {
             throw EngineFailure("browser_version", "This Chromium version is not supported.")
         }
         _ = try await runSystemCheck("Chromium architecture check", command: "/usr/bin/codesign",
@@ -121,23 +110,13 @@ final class BrowserRuntime {
         throw EngineFailure("browser_platform", "Aster requires an Apple silicon Mac.")
         #else
         let manager = FileManager.default
-        var installed = [URL(fileURLWithPath: "/Applications/Chromium.app")]
-        if let home = ProcessInfo.processInfo.environment["HOME"] {
-            installed.append(URL(fileURLWithPath: home).appendingPathComponent("Applications/Chromium.app"))
-        }
-        for app in installed where manager.fileExists(atPath: app.path) {
-            do {
-                progress("Checking installed Chromium…")
-                return try await validate(app)
-            } catch { try checkCancellation() }
-        }
         let cache = dataDirectory.appendingPathComponent("Browser", isDirectory: true)
         let versionDirectory = cache.appendingPathComponent(release, isDirectory: true)
         let cachedApp = versionDirectory.appendingPathComponent("Chromium.app")
         if manager.fileExists(atPath: cachedApp.path) {
             do {
                 progress("Checking Chromium…")
-                return try await validate(cachedApp, pinned: true)
+                return try await validate(cachedApp)
             } catch { try checkCancellation() }
         }
         try checkCancellation()
@@ -166,7 +145,7 @@ final class BrowserRuntime {
             _ = try await runSystemCheck("Chromium Finder metadata cleanup", command: "/usr/bin/xattr",
                 arguments: ["-dr", "com.apple.FinderInfo", package.appendingPathComponent("Chromium.app").path])
             progress("Checking Chromium…")
-            _ = try await validate(package.appendingPathComponent("Chromium.app"), pinned: true)
+            _ = try await validate(package.appendingPathComponent("Chromium.app"))
             try checkCancellation()
             if manager.fileExists(atPath: versionDirectory.path) { try manager.removeItem(at: versionDirectory) }
             try checkCancellation()
@@ -184,4 +163,3 @@ final class BrowserRuntime {
         #endif
     }
 }
-
