@@ -6,8 +6,8 @@
   <key>CFBundleName</key><string>Passtrami</string>
   <key>CFBundleDisplayName</key><string>Passtrami</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>2.0.1</string>
-  <key>CFBundleVersion</key><string>10</string>
+  <key>CFBundleShortVersionString</key><string>2.0.2</string>
+  <key>CFBundleVersion</key><string>11</string>
   <key>LSMinimumSystemVersion</key><string>26.2</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
@@ -15,5 +15,5 @@
   <key>SUFeedURL</key><string>https://zats.io/passtrami/appcast.xml</string>
   <key>SUPublicEDKey</key><string>9J/4RHWwpv+4wtcB2pO5C5ic0mZn4c44pk5/MMY8EFc=</string>
   <key>SUEnableAutomaticChecks</key><true/>
-  <key>SUAutomaticallyUpdate</key><false/>
+  <key>SUAutomaticallyUpdate</key><true/>
 </dict></plist>
