@@ -1,6 +1,6 @@
 # MCP access
 
-Enable **Settings → MCP → Enable MCP**, then select **Copy Configuration**. Add that JSON to a client that supports stdio MCP. The helper is `passtrami-mcp` inside the current app's Resources folder. It starts Passtrami by bundle identifier when needed. It does not need the CLI shortcut, a network port, or a second password engine.
+Enable **Settings → Tools → MCP → Enable MCP**, then select **Copy Configuration**. Add that JSON to a client that supports stdio MCP. The helper is `passtrami-mcp` inside the current app's Resources folder. It starts Passtrami by bundle identifier when needed. It does not need the CLI shortcut, a network port, or a second password engine.
 
 MCP is disabled until enabled in the app. The helper cannot change this setting. Initialization and static documentation remain available while disabled, but account and password access is rejected by the engine. `status` reports the setting without starting authentication.
 

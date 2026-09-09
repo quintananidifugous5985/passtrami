@@ -4,13 +4,13 @@ A menu bar app and CLI for Apple Passwords on Apple silicon Macs running macOS 2
 
 ## Use
 
-Place Passtrami in its intended location and open it. On first launch, it prepares the browser and starts pairing. Enter the six-digit code shown by macOS into Passtrami's focused PIN field. The sixth digit submits the code. Apple controls system authentication, including Touch ID when required.
+Move Passtrami to `/Applications` and open it. On first launch, it prepares the browser and starts pairing. Enter the six-digit code shown by macOS into Passtrami's focused PIN field. The sixth digit submits the code. Apple controls system authentication, including Touch ID when required.
 
-Passtrami checks for app updates daily. Use **Check for Updates…** in the menu to check now, or change automatic checks in **Settings… → Updates**. Sparkle verifies each update before installation.
+Passtrami checks for app updates daily. Automatic download and installation are enabled by default. Use **Check for Updates…** in the menu to check now, or change automatic checks in **Settings… → About → Updates**. Sparkle verifies each update before installation.
 
 **Lock** ends Passtrami's browser session. It does not lock the system Keychain or the Passwords app. **Unlock…** starts a new session and pairing flow. Quit stops Passtrami's engine and browser.
 
-In **Settings… → Command Line**, select **Install…**, then open a new terminal window. This creates `~/.local/bin/passtrami` and adds that folder to PATH in `~/.zprofile` and `~/.zshrc`. Once installed, **Uninstall** removes the shortcut. The bundled helper and shared PATH entry remain. **Launch at login** is on by default and can be changed in Settings.
+In **Settings… → Tools → Command Line**, select **Install…**, then open a new terminal window. This creates `~/.local/bin/passtrami` and adds that folder to PATH in `~/.zprofile` and `~/.zshrc`. Once installed, **Uninstall** removes the shortcut. The bundled helper and shared PATH entry remain. **Launch at Login** is on by default and can be changed in **Settings… → General → Startup**.
 
 ```sh
 passtrami get example.com person@example.com
@@ -29,7 +29,7 @@ Pairing does not guarantee a new Touch ID prompt for every request. Apple can re
 
 ## MCP
 
-In **Settings… → MCP**, turn on **Enable MCP**, then select **Copy Configuration**. Add the copied configuration to a client that supports local stdio MCP servers. The command points to the helper inside the current app. Copy it again if you move the app. CLI installation is not required.
+In **Settings… → Tools → MCP**, turn on **Enable MCP**, then select **Copy Configuration**. Add the copied configuration to a client that supports local stdio MCP servers. The command points to the helper inside the current app. Copy it again if you move the app. CLI installation is not required.
 
 MCP is off by default. It can list accounts for a domain and prepare a password for an exact account. The password travels through a temporary UNIX pipe directly to the program that uses it. MCP responses contain only account names, state, and pipe metadata. The pipe allows one delivery and expires after 60 seconds. Lock, Quit, or turning MCP off removes unused pipes.
 
