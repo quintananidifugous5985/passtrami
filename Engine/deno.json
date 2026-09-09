@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "strict": true
+  },
+  "fmt": {
+    "lineWidth": 110
+  },
+  "tasks": {
+    "test": "deno test --allow-all tests.ts bridge_tests.ts lifecycle_tests.ts runtime_tests.ts"
+  }
+}

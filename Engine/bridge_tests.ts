@@ -1,0 +1,81 @@
+import bridge from "./bridge.js" with { type: "text" };
+
+function assert(value: unknown, message: string): asserts value {
+  if (!value) throw new Error(message);
+}
+
+function bridgeFixture(): {
+  states: string[];
+  open(): void;
+  setState(state: string): void;
+  reply(command: number): void;
+  reconnect(): void;
+} {
+  // Execute the actual bridge with local objects. No sockets or native host are created.
+  return new Function(`
+    const states = [];
+    const self = { ASTER_CONFIG: { port: 1, token: "test-only" } };
+    let g_theState = "NotInSession", socket;
+    function setGlobalState(state) { g_theState = state; }
+    function makeNativePort() {
+      // Apple's existing listener runs before the bridge listener.
+      const listeners = new Set([(message) => {
+        if (message.cmd === 14) setGlobalState("NotInSession");
+      }]);
+      return { listeners, onMessage: { addListener: (listener) => listeners.add(listener) } };
+    }
+    let g_nativeAppPort = makeNativePort();
+    function connectToBackgroundNativeAppAndSetUpListeners() {
+      g_nativeAppPort = makeNativePort();
+      setGlobalState("CheckEngine");
+    }
+    function ChallengePIN() { throw new Error("This test must not request a challenge"); }
+    function PINSet() { throw new Error("This test must not submit a PIN"); }
+    class WebSocket {
+      static OPEN = 1;
+      readyState = 0;
+      constructor() { socket = this; }
+      send(text) {
+        const message = JSON.parse(text);
+        if (message.type === "nativeState") states.push(message.state);
+      }
+    }
+    ${bridge}
+    return {
+      states,
+      open() { socket.readyState = WebSocket.OPEN; socket.onopen(); },
+      setState(state) { setGlobalState(state); },
+      reply(cmd) { for (const listener of g_nativeAppPort.listeners) listener({ cmd }); },
+      reconnect() { connectToBackgroundNativeAppAndSetUpListeners(); }
+    };
+  `)();
+}
+
+Deno.test("bridge waits for native capabilities before reporting unlock-ready state", () => {
+  const fixture = bridgeFixture();
+  fixture.open();
+  fixture.setState("CheckEngine");
+  fixture.setState("NotInSession");
+  fixture.reply(3);
+  assert(fixture.states.length === 4, "Missing early state reports");
+  assert([...fixture.states].every((state) => state === "Connecting"), "The bridge became unlock-ready before cmd 14");
+
+  fixture.reply(14);
+  assert(fixture.states.at(-2) === "Connecting", "Apple's state reset bypassed the readiness gate");
+  assert(fixture.states.at(-1) === "NotInSession", "The capability reply did not enable unlock");
+});
+
+Deno.test("bridge waits for fresh capabilities when the native port is replaced", () => {
+  const fixture = bridgeFixture();
+  fixture.open();
+  fixture.reply(14);
+  assert(fixture.states.at(-1) === "NotInSession", "The initial native port did not become ready");
+  fixture.states.length = 0;
+
+  fixture.reconnect();
+  fixture.setState("NotInSession");
+  fixture.reply(3);
+  assert([...fixture.states].every((state) => state === "Connecting"), "The replacement port inherited readiness");
+  fixture.reply(14);
+  assert(fixture.states.at(-1) === "NotInSession", "The replacement port did not become ready after cmd 14");
+});

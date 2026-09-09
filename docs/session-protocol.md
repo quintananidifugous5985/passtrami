@@ -1,0 +1,34 @@
+# Session protocol
+
+Aster's Swift app owns the Deno engine. The CLI sends one request per connection over a Unix socket in `~/Library/Application Support/io.zats.Aster/`. The directory is mode `0700`; the socket is mode `0600`.
+
+The engine starts an isolated headless browser and loads a temporary copy of Apple's extension with Aster's bridge appended. The bridge connects to a loopback WebSocket with a token generated for that browser session. Apple's extension communicates with the system password helper through native messaging.
+
+## Pairing and lock
+
+The bridge reports changes from the extension's `setGlobalState` function:
+
+| Extension state | Aster behavior |
+| --- | --- |
+| `NotInSession` | Locked; pairing can start. |
+| `ChallengeSent` | Wait for Apple's pairing challenge. |
+| `MSG1Set` | Show the PIN field. |
+| `SessionKeySet` | Accept password requests while this bridge remains connected. |
+| `CheckEngine` | Stop treating the session as unlocked. |
+| `NativeSupportNotInstalled` or `IncompatibleOS` | Report a helper connection error. |
+
+A PIN submission is not proof of unlock. Aster waits for `SessionKeySet`. The app clears its PIN field on submission or cancellation.
+
+Lock closes the bridge, stops the owned browser, rejects pending requests, and removes the temporary profile. The next unlock starts a new browser session and pairing flow. This does not lock the system Keychain or the Passwords app.
+
+## Account and password requests
+
+The engine serializes requests and waits for unlock. For `list`, the bridge sends native command 4 with `ACT: 5` and the requested domain in `URL`. Aster filters the returned accounts by domain and returns unique usernames without passwords.
+
+For `get`, the bridge sends native command 5 with an encrypted body containing `ACT: 2`, the requested domain in `URL`, and the exact username in `USR`. Aster checks returned records against both values before returning the password to the CLI.
+
+Apple's helper controls authentication. A paired session can still require system authentication; a request does not guarantee a new Touch ID prompt.
+
+Pending work belongs to the current browser session. A disconnect, lock, or failed or cancelled native request ends that session before another request can use it. This prevents a late native reply from being assigned to a later request.
+
+State events and errors must not contain PINs, session tokens, encrypted payloads, passwords, or full credential responses. Passwords are returned only through the requesting CLI connection.
