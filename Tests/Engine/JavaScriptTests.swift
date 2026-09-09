@@ -178,7 +178,7 @@ func runJavaScriptTests() async throws {
     }
 
     // Timeouts and native locks end the old session before retrying.
-    for cause in ["timeout", "locked", "bridgeClosed", "browserExited"] {
+    for cause in ["timeout", "locked", "relogin", "bridgeClosed", "browserExited"] {
         let f = try ScriptFixture(), token = try await f.start()
         try f.connect("bridge", token: token, state: "SessionKeySet")
         try f.request("request")
@@ -187,6 +187,10 @@ func runJavaScriptTests() async throws {
             let timer = f.posts.first { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
             f.event(["type": "timer", "id": timer["id"]!])
         } else if cause == "locked" { try f.nativeReply("bridge", request: request, status: 9) }
+        else if cause == "relogin" {
+            try f.state("bridge", "CheckEngine")
+            try f.state("bridge", "NotInSession")
+        }
         else if cause == "bridgeClosed" { f.event(["type": cause, "connection": "bridge"]) }
         else { f.event(["type": cause, "token": token]) }
         f.complete(try await f.take("stopBrowser"))
@@ -200,6 +204,55 @@ func runJavaScriptTests() async throws {
             try f.nativeReply("new", request: retry)
             try engineExpect(try await f.response("request")["password"] as? String == "fixture-only", "Retry failed")
         }
+    }
+
+    // A failed native helper must release the browser before Unlock or a CLI request retries.
+    for op in ["unlock", "get", "list"] {
+        let f = try ScriptFixture(), token = try await f.start()
+        try f.connect("old", token: token, state: "SessionKeySet")
+        try f.state("old", "NativeSupportNotInstalled")
+        try engineExpect(try await f.status()["state"] as? String == "error", "Native helper failure did not reach the UI state")
+        let stop = try await f.take("stopBrowser")
+        if op == "unlock" { f.command("unlock") }
+        else { try f.request("retry", op: op) }
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Recovery started before the old browser stopped")
+        f.complete(stop)
+        let start = try await f.take("startBrowser")
+        try engineExpect(start["token"] as? String != token, "Helper recovery reused the failed session")
+        f.complete(start)
+        try f.state("old", "SessionKeySet")
+        try engineExpect(try await f.status()["state"] as? String != "unlocked", "The failed helper restored an old session")
+        try f.connect("new", token: start["token"] as! String)
+        try engineExpect(try await f.sent("new")["op"] as? String == "unlock", "Helper recovery did not request pairing")
+        try f.state("new", "MSG1Set")
+        try engineExpect(f.posts.contains {
+            $0["op"] as? String == "emit" && ($0["event"] as? [String: Any])?["type"] as? String == "pinRequired"
+        }, "Helper recovery did not request the PIN window")
+        try f.state("new", "SessionKeySet")
+        if op != "unlock" {
+            try f.nativeReply("new", request: await f.sent("new"))
+            try engineExpect(try await f.response("retry")["ok"] as? Bool == true, "CLI request did not resume after helper recovery")
+        }
+        try engineExpect(try await f.status()["state"] as? String == "unlocked", "Helper recovery did not update the UI state")
+    }
+
+    // The final invalid-session reply must clear both CLI status and the menu state.
+    for op in ["get", "list"] {
+        let f = try ScriptFixture(), token = try await f.start()
+        try f.connect("old", token: token, state: "SessionKeySet")
+        try f.request("request", op: op)
+        try f.nativeReply("old", request: await f.sent("old"), status: 9)
+        f.complete(try await f.take("stopBrowser"))
+        let start = try await f.take("startBrowser")
+        f.complete(start)
+        try f.connect("new", token: start["token"] as! String, state: "SessionKeySet")
+        try f.nativeReply("new", request: await f.sent("new"), status: 9)
+        f.complete(try await f.take("stopBrowser"))
+        try engineExpect(try await f.response("request")["code"] as? String == "locked", "The final lock error was not returned")
+        try engineExpect(try await f.status()["state"] as? String == "locked", "The final lock error left CLI status unlocked")
+        let lastState = f.posts.compactMap { $0["event"] as? [String: Any] }.last { $0["type"] as? String == "state" }
+        try engineExpect(lastState?["state"] as? String == "locked", "The final lock error left the menu state unlocked")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Retried beyond the request limit")
     }
 
     // A failed startup must invalidate an already-connected extension.

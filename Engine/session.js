@@ -83,9 +83,9 @@
         beginChallenge();
       }
     } else if (state === 'NativeSupportNotInstalled' || state === 'IncompatibleOS') {
-      appUnlockRequested = false;
       const error = new RequestError('native_helper', "Apple's password helper did not connect to Chromium.");
-      setPhase('error', error.message); resolveWaiters(error); rejectPending(error);
+      setPhase('error', error.message);
+      void lock(error, 'error');
     } else if (state === 'Connecting') setPhase('starting');
     else if (state === 'CheckEngine') setPhase('locked');
   }
@@ -124,7 +124,7 @@
       requestUnlock().catch(remove);
     });
   }
-  function lock(error = new RequestError('cancelled', 'The password session was locked or cancelled.')) {
+  function lock(error = new RequestError('cancelled', 'The password session was locked or cancelled.'), finalPhase = 'locked') {
     if (stopping) return stopping;
     appUnlockRequested = false; challengeSent = false; pinSubmitted = false; generation++; token = null;
     resolveWaiters(error); rejectPending(error); browser = false;
@@ -133,7 +133,7 @@
     stopping = (async () => {
       await native('stopBrowser');
       if (oldLaunch) await oldLaunch;
-      setPhase('locked');
+      setPhase(finalPhase, finalPhase === 'error' ? error.message : undefined);
     })().finally(() => { stopping = null; });
     return stopping;
   }
@@ -170,8 +170,9 @@
         if (list) return { ok: true, usernames: usernamesFrom(data, domain) };
         return { ok: true, password: onePassword(credentialsFrom(data, domain, username)) };
       } catch (error) {
-        if (error.code !== 'locked' || attempt) throw error;
+        if (error.code !== 'locked') throw error;
         await lock(error);
+        if (attempt) throw error;
       }
     }
     throw new RequestError('locked', 'The password session is locked.');
