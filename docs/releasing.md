@@ -7,7 +7,7 @@ The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami
 - Install a Developer ID Application identity for the Apple Developer team on the release Mac.
 - Store notarization credentials with `xcrun notarytool store-credentials PROFILE`. Use the interactive prompts; do not put passwords in scripts or commit them.
 - Run `python3 scripts/sparkle-tools.py`, then use the printed tool directory to run `generate_keys --account io.zats.Passtrami`. The public key must match `SUPublicEDKey` in `Info.plist`. Keep the private key in the Keychain. Do not replace it for each release or export it to GitHub Actions.
-- In the repository's **Settings → Pages**, select **GitHub Actions** as the source. Permit deployments from the main branch in the `github-pages` environment.
+- In the repository's **Settings → Pages**, select **GitHub Actions** as the source and enforce HTTPS. In the `github-pages` environment, permit the `main` branch and tags matching `v*b*`. Release events run from a tag. This account's Pages site uses the `zats.io` domain.
 
 The tools script reads the exact Sparkle version from `Package.resolved`, downloads that version's official tool archive, and checks its SHA256 against GitHub release metadata. The app framework is resolved separately by Swift Package Manager with its package checksum.
 
