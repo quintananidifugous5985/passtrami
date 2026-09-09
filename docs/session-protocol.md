@@ -1,6 +1,6 @@
 # Session protocol
 
-Aster's Swift app owns the Deno engine. The CLI sends one request per connection over a Unix socket in `~/Library/Application Support/io.zats.Aster/`. The directory is mode `0700`; the socket is mode `0600`.
+Aster's Swift app owns a native engine that runs the session code in JavaScriptCore. Swift handles the browser process, downloads, timers, Unix socket, and loopback WebSocket. The CLI sends one request per connection over a Unix socket in `~/Library/Application Support/io.zats.Aster/`. The directory is mode `0700`; the socket is mode `0600`.
 
 The engine starts an isolated headless browser and loads a temporary copy of Apple's extension with Aster's bridge appended. The bridge connects to a loopback WebSocket with a token generated for that browser session. Apple's extension communicates with the system password helper through native messaging.
 
@@ -17,7 +17,7 @@ The bridge reports changes from the extension's `setGlobalState` function:
 | `CheckEngine` | Stop treating the session as unlocked. |
 | `NativeSupportNotInstalled` or `IncompatibleOS` | Report a helper connection error. |
 
-A PIN submission is not proof of unlock. Aster waits for `SessionKeySet`. The app clears its PIN field on submission or cancellation.
+A PIN submission is not proof of unlock. Aster waits for `SessionKeySet`. The app disables the PIN field while checking and clears it on an error or dismissal.
 
 Lock closes the bridge, stops the owned browser, rejects pending requests, and removes the temporary profile. The next unlock starts a new browser session and pairing flow. This does not lock the system Keychain or the Passwords app.
 

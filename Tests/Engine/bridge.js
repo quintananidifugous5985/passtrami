@@ -1,16 +1,10 @@
-import bridge from "./bridge.js" with { type: "text" };
+(() => {
 
-function assert(value: unknown, message: string): asserts value {
+function assert(value, message) {
   if (!value) throw new Error(message);
 }
 
-function bridgeFixture(): {
-  states: string[];
-  open(): void;
-  setState(state: string): void;
-  reply(command: number): void;
-  reconnect(): void;
-} {
+function bridgeFixture() {
   // Execute the actual bridge with local objects. No sockets or native host are created.
   return new Function(`
     const states = [];
@@ -40,7 +34,7 @@ function bridgeFixture(): {
         if (message.type === "nativeState") states.push(message.state);
       }
     }
-    ${bridge}
+    ${__bridgeSource}
     return {
       states,
       open() { socket.readyState = WebSocket.OPEN; socket.onopen(); },
@@ -51,7 +45,7 @@ function bridgeFixture(): {
   `)();
 }
 
-Deno.test("bridge waits for native capabilities before reporting unlock-ready state", () => {
+test("bridge waits for native capabilities before reporting unlock-ready state", () => {
   const fixture = bridgeFixture();
   fixture.open();
   fixture.setState("CheckEngine");
@@ -65,7 +59,7 @@ Deno.test("bridge waits for native capabilities before reporting unlock-ready st
   assert(fixture.states.at(-1) === "NotInSession", "The capability reply did not enable unlock");
 });
 
-Deno.test("bridge waits for fresh capabilities when the native port is replaced", () => {
+test("bridge waits for fresh capabilities when the native port is replaced", () => {
   const fixture = bridgeFixture();
   fixture.open();
   fixture.reply(14);
@@ -79,3 +73,5 @@ Deno.test("bridge waits for fresh capabilities when the native port is replaced"
   fixture.reply(14);
   assert(fixture.states.at(-1) === "NotInSession", "The replacement port did not become ready after cmd 14");
 });
+
+})();

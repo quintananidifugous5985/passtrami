@@ -12,8 +12,7 @@
       ],
       "layers" : [
         {
-          "glass" : false,
-          "image-name" : "light.png",
+          "image-name" : "Image.png",
           "name" : "light"
         }
       ],
@@ -35,13 +34,7 @@
       ],
       "layers" : [
         {
-          "glass-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : false
-            }
-          ],
-          "image-name" : "dark.png",
+          "image-name" : "Image 2.png",
           "name" : "dark"
         }
       ],

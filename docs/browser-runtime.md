@@ -18,7 +18,7 @@ If no valid browser is available, Aster downloads the pinned [upstream release](
 | Download release | `152.0.7977.82-1.1` |
 | DMG SHA256 | `ba673876533e79b3c09edaf3ebd0dadcc29e9d0112b9b843d8c032cfb7bfb457` |
 
-The URL, hash, version, and signing requirement are set in [`Engine/runtime.ts`](../Engine/runtime.ts). Every candidate must pass strict code-signature verification and Gatekeeper assessment. Apple's native helper also enforces its own browser launch constraints; a generic Chromium build is not interchangeable with this signed release.
+The URL, hash, version, and signing requirement are set in [`Sources/Engine/BrowserRuntime.swift`](../Sources/Engine/BrowserRuntime.swift). Every candidate must pass strict code-signature verification and Gatekeeper assessment. Apple's native helper also enforces its own browser launch constraints; a generic Chromium build is not interchangeable with this signed release.
 
 ## Setup
 
@@ -30,7 +30,7 @@ The menu bar icon's tooltip shows setup progress. **Cancel Setup** stops the ope
 
 Each session uses a temporary profile and extension copy. Aster loads the extension through [`Extensions.loadUnpacked`](https://chromedevtools.github.io/devtools-protocol/tot/Extensions/#method-loadUnpacked), then closes the DevTools connection. The full browser runs in headless mode.
 
-The launch flags in [`Engine/browser.ts`](../Engine/browser.ts) disable website and native notifications, DIAL discovery, and the browser's app-copy step for updates. `--use-mock-keychain` prevents a Chromium Safe Storage prompt for the temporary profile. These settings do not replace Apple's password authentication.
+The launch flags in [`Sources/Engine/BrowserSession.swift`](../Sources/Engine/BrowserSession.swift) disable website and native notifications, DIAL discovery, and the browser's app-copy step for updates. `--use-mock-keychain` prevents a Chromium Safe Storage prompt for the temporary profile. These settings do not replace Apple's password authentication.
 
 If an installed browser is replaced while Aster uses it, start a new Aster session.
 

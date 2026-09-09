@@ -26,16 +26,19 @@ app="$output_dir/Aster.app"
 # Recreate only the build output so obsolete executable paths cannot remain.
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers" "$app/Contents/Resources"
-deno check Engine/main.ts
-deno task --config Engine/deno.json test
+Tests/Engine/run.sh
 Tests/CLI/run.sh
-deno compile --allow-all --no-check --output "$app/Contents/Resources/aster-engine" Engine/main.ts
+xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
+  "${swift_flags[@]}" -target "arm64-apple-macos$minimum_macos" -framework JavaScriptCore -framework Network \
+  Sources/Engine/*.swift -o "$app/Contents/Resources/aster-engine"
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   "${swift_flags[@]}" -target "arm64-apple-macos$minimum_macos" -framework AppKit Sources/App/*.swift -o "$app/Contents/MacOS/Aster"
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   "${swift_flags[@]}" -target "arm64-apple-macos$minimum_macos" Sources/CLI/main.swift -o "$app/Contents/Helpers/aster"
 cp Info.plist "$app/Contents/Info.plist"
 rsync -a --delete Resources/ "$app/Contents/Resources/" --exclude aster-engine --exclude .DS_Store
+mkdir -p "$app/Contents/Resources/Engine"
+cp Engine/*.js "$app/Contents/Resources/Engine/"
 (
   icon_info=$(mktemp "${TMPDIR:-/tmp/}aster-icon.XXXXXX")
   trap 'rm -f "$icon_info"' EXIT
