@@ -8,6 +8,7 @@ final class JavaScriptEngine {
     private let dataDirectory: URL
     private var script: SessionScript?
     private var cli: CLIListener?
+    private var mcp: MCPBroker?
     private var bridge: BridgeListener?
     private var port: UInt16 = 0
     private var browser: BrowserSession?
@@ -26,6 +27,14 @@ final class JavaScriptEngine {
         try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectory.path)
+        let pipes = try PasswordPipes(directory: dataDirectory.appendingPathComponent("password-pipes"))
+        mcp = MCPBroker(pipes: pipes, forward: { [weak self] id, text in
+            self?.deliver(["type": "request", "connection": id, "text": text])
+        }, reply: { [weak self] id, text in
+            self?.cli?.reply(id: id, json: text)
+        }, cancel: { [weak self] id in
+            self?.deliver(["type": "clientClosed", "connection": id])
+        })
         script = try SessionScript(directory: resources.appendingPathComponent("Engine"), onPost: { [weak self] in
             self?.handle($0)
         }, onFailure: { [weak self] in
@@ -42,9 +51,13 @@ final class JavaScriptEngine {
         bridge = listener
         port = try await listener.start()
         cli = try CLIListener(path: dataDirectory.appendingPathComponent("aster.sock").path, onRequest: { [weak self] id, text in
+            if self?.mcp?.receive(id, text: text) == true { return }
             self?.deliver(["type": "request", "connection": id, "text": text])
         }, onDisconnect: { [weak self] id in
+            self?.mcp?.disconnected(id)
             self?.deliver(["type": "clientClosed", "connection": id])
+        }, onFinish: { [weak self] id, delivered in
+            self?.mcp?.responseFinished(id, delivered: delivered)
         })
         FileHandle.standardInput.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -56,7 +69,7 @@ final class JavaScriptEngine {
             signal(number, SIG_IGN)
             let source = DispatchSource.makeSignalSource(signal: number, queue: .main)
             source.setEventHandler { [weak self] in
-                MainActor.assumeIsolated { self?.deliver(["type": "command", "command": ["op": "shutdown"]]) }
+                MainActor.assumeIsolated { self?.command(["op": "shutdown"]) }
             }
             signals.append(source)
             source.resume()
@@ -90,8 +103,17 @@ final class JavaScriptEngine {
             if let text = message["text"] as? String { bridge?.send(id: connection, text: text) }
         case "disconnect": bridge?.disconnect(id: connection)
         case "reply":
-            if let text = message["text"] as? String { cli?.reply(id: connection, json: text) }
-        case "closeClient": cli?.disconnect(id: connection)
+            if let text = message["text"] as? String {
+                if connection.hasPrefix("mcp:") {
+                    mcp?.receiveReply(String(connection.dropFirst(4)), text: text)
+                } else { cli?.reply(id: connection, json: text) }
+            }
+        case "closeClient":
+            if connection.hasPrefix("mcp:") {
+                let id = String(connection.dropFirst(4))
+                mcp?.disconnected(id)
+                cli?.disconnect(id: id)
+            } else { cli?.disconnect(id: connection) }
         case "startBrowser":
             guard let token = message["token"] as? String else { return }
             startup = Task { [weak self] in
@@ -113,6 +135,7 @@ final class JavaScriptEngine {
                 }
             }
         case "stopBrowser":
+            mcp?.revokePipes()
             Task { [weak self] in
                 guard let self else { return }
                 await stopBrowser()
@@ -132,7 +155,7 @@ final class JavaScriptEngine {
     private func readInput(_ data: Data) {
         guard !stopping else { return }
         if data.isEmpty {
-            deliver(["type": "command", "command": ["op": "shutdown"]])
+            command(["op": "shutdown"])
             return
         }
         input.append(data)
@@ -145,11 +168,21 @@ final class JavaScriptEngine {
             input.removeSubrange(...newline)
             guard let value = try? JSONSerialization.jsonObject(with: line) as? [String: Any],
                   value["op"] is String else { continue }
-            deliver(["type": "command", "command": value])
+            command(value)
         }
     }
 
+    private func command(_ value: [String: Any]) {
+        if value["op"] as? String == "mcp" {
+            if let enabled = value["enabled"] as? Bool { mcp?.setEnabled(enabled) }
+            return
+        }
+        if ["lock", "shutdown"].contains(value["op"] as? String ?? "") { mcp?.invalidate() }
+        deliver(["type": "command", "command": value])
+    }
+
     private func emit(_ event: [String: Any]) {
+        if event["type"] as? String == "state", let state = event["state"] as? String { mcp?.setState(state) }
         guard var data = try? JSONSerialization.data(withJSONObject: event) else { return }
         data.append(0x0A)
         try? FileHandle.standardOutput.write(contentsOf: data)
@@ -167,6 +200,7 @@ final class JavaScriptEngine {
 
     private func shutdown(exitCode: Int32) async {
         guard !stopping else { return }
+        mcp?.invalidate()
         stopping = true
         FileHandle.standardInput.readabilityHandler = nil
         for task in timers.values { task.cancel() }

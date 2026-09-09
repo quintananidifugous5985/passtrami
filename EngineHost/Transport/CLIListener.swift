@@ -26,15 +26,18 @@ final class CLIListener {
     private let path: String
     private let onRequest: @MainActor (String, String) -> Void
     private let onDisconnect: @MainActor (String) -> Void
+    private let onFinish: @MainActor (String, Bool) -> Void
     private var descriptor: Int32 = -1
     private var source: DispatchSourceRead?
     private var clients: [String: Client] = [:]
 
     init(path: String, onRequest: @escaping @MainActor (String, String) -> Void,
-         onDisconnect: @escaping @MainActor (String) -> Void) throws {
+         onDisconnect: @escaping @MainActor (String) -> Void,
+         onFinish: @escaping @MainActor (String, Bool) -> Void = { _, _ in }) throws {
         self.path = path
         self.onRequest = onRequest
         self.onDisconnect = onDisconnect
+        self.onFinish = onFinish
 
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
@@ -185,5 +188,6 @@ final class CLIListener {
         client.input.removeAll(keepingCapacity: false)
         client.output.removeAll(keepingCapacity: false)
         if cancelled && client.receivedRequest && !client.replying { onDisconnect(id) }
+        onFinish(id, !cancelled)
     }
 }

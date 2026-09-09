@@ -5,7 +5,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let engine = EngineProcess()
     private let pinWindow = PINWindow()
     private let launchAtLogin = LaunchAtLoginController()
-    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin) {
+    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, onMCPChange: { [weak self] enabled in
+        self?.engine.setMCPEnabled(enabled)
+    }) {
         NSApp.setActivationPolicy(.accessory)
         NSApp.deactivate()
     }

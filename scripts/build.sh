@@ -25,8 +25,10 @@ app="$output_dir/Aster.app"
 Tests/Engine/run.sh
 Tests/CLI/run.sh
 Tests/App/run.sh
+Tests/MCP/run.sh
 xcodebuild -quiet -project Aster.xcodeproj -scheme Aster \
   -configuration "$xcode_configuration" -derivedDataPath "$project_root/build/Xcode" \
+  -clonedSourcePackagesDirPath "$project_root/build/SourcePackages" \
   -destination 'platform=macOS,arch=arm64' build
 # Publish only a completed build; keep the previous app if compilation fails.
 rm -rf "$app"

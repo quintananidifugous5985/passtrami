@@ -58,4 +58,14 @@ let plist: [String: Any] = ["CFBundleIdentifier": "io.zats.DisplayNameTest", "CF
 try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
     .write(to: bundleURL.appendingPathComponent("Contents/Info.plist"))
 expect(Bundle(url: bundleURL)!.displayName == "Display Name Test", "Use display name, not internal name")
-print("App tests passed: CLI install/uninstall, ownership, and bundle display name")
+
+let defaultsDomain = "io.zats.Aster.MCPTests.\(UUID().uuidString)"
+let defaults = UserDefaults(suiteName: defaultsDomain)!
+defer { defaults.removePersistentDomain(forName: defaultsDomain) }
+let mcpSettings = MCPSettings(defaults: defaults)
+expect(!mcpSettings.isEnabled, "MCP must be disabled before the user enables it")
+mcpSettings.isEnabled = true
+expect(MCPSettings(defaults: defaults).isEnabled, "MCP enable choice must persist")
+mcpSettings.isEnabled = false
+expect(!MCPSettings(defaults: defaults).isEnabled, "MCP disable choice must persist")
+print("App tests passed: CLI install/uninstall, ownership, bundle display name, and MCP settings")

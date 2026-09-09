@@ -38,6 +38,6 @@ Secret delivery through the pipe was not tested. The user then limited this work
 
 Currently, `aster get` deliberately writes the password to stdout. Calling it directly as an agent tool puts that password in the tool result. Touch ID approval does not change this.
 
-For routine transcript protection, Aster could deliver a credential directly to a consumer process and return only an operation result. An agent would specify the website, account, and intended action. A trusted component would resolve the secret and use it outside model messages.
+For routine transcript protection, Aster's [MCP interface](mcp.md) delivers a credential through a temporary UNIX pipe and returns only metadata. An agent specifies the website and account. A local program reads the password from the pipe and uses it outside model messages. The pipe permits one delivery, expires after 60 seconds, and is removed on lock, disable, or shutdown.
 
-For a stronger guarantee, the agent must also be unable to replace that component, request raw `get` output, read its memory or input pipe, or change the credential destination. A shell wrapper or masked output alone cannot enforce this when the agent retains unrestricted local execution. These are design implications, not features implemented in Aster by this change.
+For a stronger guarantee, the agent must also be unable to replace the consumer, request raw `get` output, read its memory or input pipe, or change the credential destination. Aster's MCP interface does not enforce that isolation when the agent retains unrestricted local execution.

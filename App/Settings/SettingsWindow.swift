@@ -9,11 +9,12 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let model: SettingsModel
     private let didClose: () -> Void
 
-    init(launchAtLogin: LaunchAtLoginController, didClose: @escaping () -> Void) {
-        model = SettingsModel(launchAtLogin: launchAtLogin)
+    init(launchAtLogin: LaunchAtLoginController, onMCPChange: @escaping (Bool) -> Void,
+         didClose: @escaping () -> Void) {
+        model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
         self.didClose = didClose
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 550, height: 360),
+            contentRect: NSRect(x: 0, y: 0, width: 550, height: 440),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -27,7 +28,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.moveToActiveSpace, .fullScreenNone]
         if !window.setFrameUsingName(Self.frameAutosaveName) { window.center() }
-        window.setContentSize(NSSize(width: 550, height: 360))
+        window.setContentSize(NSSize(width: 550, height: 440))
         window.setFrameAutosaveName(Self.frameAutosaveName)
         super.init(window: window)
         window.delegate = self
@@ -52,11 +53,22 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 final class SettingsModel {
     private let launchAtLogin: LaunchAtLoginController
     private let installer: CLIInstaller
+    private let mcpSettings: MCPSettings
+    private let onMCPChange: (Bool) -> Void
     private(set) var loginStatus: SMAppService.Status = .notRegistered
     private(set) var loginError: String?
     private(set) var cliInstalled = false
     private(set) var cliError: String?
     private(set) var didInstallCLI = false
+    private(set) var mcpError: String?
+
+    var mcpEnabled: Bool {
+        didSet {
+            guard mcpEnabled != oldValue else { return }
+            mcpSettings.isEnabled = mcpEnabled
+            onMCPChange(mcpEnabled)
+        }
+    }
 
     var launchAtLoginEnabled: Bool {
         get { loginStatus == .enabled }
@@ -66,9 +78,13 @@ final class SettingsModel {
         }
     }
 
-    init(launchAtLogin: LaunchAtLoginController, installer: CLIInstaller = CLIInstaller()) {
+    init(launchAtLogin: LaunchAtLoginController, installer: CLIInstaller = CLIInstaller(),
+         mcpSettings: MCPSettings = MCPSettings(), onMCPChange: @escaping (Bool) -> Void) {
         self.launchAtLogin = launchAtLogin
         self.installer = installer
+        self.mcpSettings = mcpSettings
+        self.onMCPChange = onMCPChange
+        mcpEnabled = mcpSettings.isEnabled
     }
 
     func refresh() {
@@ -79,6 +95,26 @@ final class SettingsModel {
     }
 
     func openLoginItems() { launchAtLogin.openLoginItems() }
+
+    func copyMCPConfiguration() {
+        mcpError = nil
+        guard let executable = Bundle.main.resourceURL?.appendingPathComponent("aster-mcp") else {
+            mcpError = "The MCP server is unavailable."
+            return
+        }
+        let configuration: [String: Any] = [
+            "mcpServers": ["aster": ["command": executable.path, "args": [String]()]]
+        ]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: configuration, options: [.prettyPrinted, .sortedKeys])
+            NSPasteboard.general.clearContents()
+            if !NSPasteboard.general.setString(String(decoding: data, as: UTF8.self), forType: .string) {
+                mcpError = "Could not copy the configuration."
+            }
+        } catch {
+            mcpError = "Could not copy the configuration."
+        }
+    }
 
     func revealCLI() {
         guard installer.isInstalled else { return }

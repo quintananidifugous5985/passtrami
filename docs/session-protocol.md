@@ -31,4 +31,4 @@ Apple's helper controls authentication. A paired session can still require syste
 
 Pending work belongs to the current browser session. A disconnect, lock, or failed or cancelled native request ends that session before another request can use it. This prevents a late native reply from being assigned to a later request.
 
-State events and errors must not contain PINs, session tokens, encrypted payloads, passwords, or full credential responses. Passwords are returned only through the requesting CLI connection.
+State events and errors must not contain PINs, session tokens, encrypted payloads, passwords, or full credential responses. Ordinary `get` returns the password through the requesting CLI connection. MCP requests use a separate engine response path: `MCPBroker` converts the credential to a temporary pipe and returns only its metadata. The reserved `mcp:` connection prefix prevents a late password reply from reaching the ordinary CLI reply path. The app alone controls MCP enablement through its private stdin connection to the engine. See [MCP access](mcp.md).

@@ -10,6 +10,7 @@ Task { @MainActor in
         try await runJavaScriptTests()
         try await runTransportTests()
         try await runRuntimeTests()
+        try await runMCPTests()
         print("Native engine tests passed")
         exit(0)
     } catch {

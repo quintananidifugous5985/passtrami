@@ -12,8 +12,9 @@
       ],
       "layers" : [
         {
-          "image-name" : "Image.png",
-          "name" : "light"
+          "glass" : false,
+          "image-name" : "keyhole_light.png",
+          "name" : "keyhole_light"
         }
       ],
       "shadow" : {
@@ -34,8 +35,8 @@
       ],
       "layers" : [
         {
-          "image-name" : "Image 2.png",
-          "name" : "dark"
+          "image-name" : "keyhole_dark 2.png",
+          "name" : "keyhole_dark 2"
         }
       ],
       "shadow" : {

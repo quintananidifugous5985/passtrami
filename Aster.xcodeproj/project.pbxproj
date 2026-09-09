@@ -7,8 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 6086BAF2C1AD43519A16AB5A /* MCP */; };
+		5369FAAF6A01C8682C47A10E /* AsterMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* AsterMCP */; };
 		7B0510CC02CDE69FF877464B /* AsterCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* AsterCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = D019F1D8C6B2908C54113CCD /* AsterEngine */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C3492C30EFC8EF7CFBC941BE /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = A1F139CC6E6255ACF70FAB05 /* MCP */; };
+		E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802A56FBF9D7D8AF4A769C73 /* Harness.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,6 +22,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4426215152A4A4D601B65F1C;
 			remoteInfo = AsterCLI;
+		};
+		BE5F3539B5C5EE5256902EAD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5A2E607E04C4F8CFF16AA16B;
+			remoteInfo = AsterMCP;
 		};
 		FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -36,6 +47,7 @@
 			dstSubfolderSpec = 7;
 			files = (
 				8349569D03C2C7D437824D2E /* AsterEngine in Embed Dependencies */,
+				5369FAAF6A01C8682C47A10E /* AsterMCP in Embed Dependencies */,
 			);
 			name = "Embed Dependencies";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -55,95 +67,131 @@
 
 /* Begin PBXFileReference section */
 		029FA881CCD882486E5A92AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
-		7FE6811E743DE5CC922F8867 /* AsterCLI */ = {isa = PBXFileReference; includeInIndex = 0; path = AsterCLI; sourceTree = BUILT_PRODUCTS_DIR; };
+		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		7FE6811E743DE5CC922F8867 /* AsterCLI */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterCLI; path = aster; sourceTree = BUILT_PRODUCTS_DIR; };
+		802A56FBF9D7D8AF4A769C73 /* Harness.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/MCP/Harness.swift; sourceTree = SOURCE_ROOT; };
 		B4710E9398C8906FECD1912E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		C1AEE46C19B149E24D4EABA8 /* AsterMCP */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterMCP; path = "aster-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB93E85E385AB11CEDE6E577 /* AsterMCPTests */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterMCPTests; path = "aster-mcp-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CDF5B95C40E49420E3973C0D /* Aster.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aster.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		D019F1D8C6B2908C54113CCD /* AsterEngine */ = {isa = PBXFileReference; includeInIndex = 0; path = AsterEngine; sourceTree = BUILT_PRODUCTS_DIR; };
+		D019F1D8C6B2908C54113CCD /* AsterEngine */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = AsterEngine; path = "aster-engine"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0B4FFC526A61A1A8D5846300 /* docs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = docs;
+			sourceTree = "<group>";
+		};
 		125777AB9613392B6AC02548 /* EngineHost */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+			exceptions = (
 			);
 			path = EngineHost;
 			sourceTree = "<group>";
 		};
+		1CCAD66A4B668FEEB19D5AE6 /* MCP */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = MCP;
+			sourceTree = "<group>";
+		};
+		1D3FB38E8B39D75234F62B6F /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		277E4202639A8AFC1E65CFE8 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		6E5FBFFB187A8BD3A27DEE10 /* Engine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
 		7E4F0DA256D1000B91C2A6A2 /* CLI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+			exceptions = (
 			);
 			path = CLI;
 			sourceTree = "<group>";
 		};
 		9D6EEFFECD5053C98768ED1D /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+			exceptions = (
 			);
 			path = App;
 			sourceTree = "<group>";
 		};
 		A810734D4F22BD85D4808402 /* Assets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {
-			};
-			explicitFolders = (
+			exceptions = (
 			);
 			path = Assets;
 			sourceTree = "<group>";
 		};
-		6E5FBFFB187A8BD3A27DEE10 /* Engine */ = {
+		B092B14A287035E633107DF7 /* scripts */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
-			path = Engine;
-			sourceTree = "<group>";
-		};
-		277E4202639A8AFC1E65CFE8 /* Resources */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
-			path = Resources;
+			exceptions = (
+			);
+			path = scripts;
 			sourceTree = "<group>";
 		};
 		C9458214625DDC4F9CC78016 /* Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
+			exceptions = (
+			);
 			path = Tests;
-			sourceTree = "<group>";
-		};
-		0B4FFC526A61A1A8D5846300 /* docs */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
-			path = docs;
-			sourceTree = "<group>";
-		};
-		B092B14A287035E633107DF7 /* scripts */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
-			path = scripts;
 			sourceTree = "<group>";
 		};
 		D5E9C4D3C7B3F3E3A860CD71 /* Vendor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			explicitFileTypes = {};
-			explicitFolders = ();
+			exceptions = (
+			);
 			path = Vendor;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		3CD6C960F30D39895A354FB1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B6F1E625EDE92EE3367E7485 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3492C30EFC8EF7CFBC941BE /* MCP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
+		5CB8F1F13051BEA1005551C5 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				802A56FBF9D7D8AF4A769C73 /* Harness.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		8D4C14C33AD6A0093C0F2E92 = {
 			isa = PBXGroup;
 			children = (
@@ -161,6 +209,10 @@
 				B092B14A287035E633107DF7 /* scripts */,
 				D5E9C4D3C7B3F3E3A860CD71 /* Vendor */,
 				CC27F93FED78DB135292D4E1 /* Products */,
+				1D3FB38E8B39D75234F62B6F /* Shared */,
+				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
+				E10641F8AE6469C143A69FAF /* Frameworks */,
+				5CB8F1F13051BEA1005551C5 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -170,8 +222,25 @@
 				CDF5B95C40E49420E3973C0D /* Aster.app */,
 				7FE6811E743DE5CC922F8867 /* AsterCLI */,
 				D019F1D8C6B2908C54113CCD /* AsterEngine */,
+				C1AEE46C19B149E24D4EABA8 /* AsterMCP */,
+				CB93E85E385AB11CEDE6E577 /* AsterMCPTests */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D38897824FEBD2F9E1AC9EA7 /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		E10641F8AE6469C143A69FAF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D38897824FEBD2F9E1AC9EA7 /* OS X */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -192,8 +261,6 @@
 				125777AB9613392B6AC02548 /* EngineHost */,
 			);
 			name = AsterEngine;
-			packageProductDependencies = (
-			);
 			productName = AsterEngine;
 			productReference = D019F1D8C6B2908C54113CCD /* AsterEngine */;
 			productType = "com.apple.product-type.tool";
@@ -210,11 +277,10 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				1D3FB38E8B39D75234F62B6F /* Shared */,
 				7E4F0DA256D1000B91C2A6A2 /* CLI */,
 			);
 			name = AsterCLI;
-			packageProductDependencies = (
-			);
 			productName = AsterCLI;
 			productReference = 7FE6811E743DE5CC922F8867 /* AsterCLI */;
 			productType = "com.apple.product-type.tool";
@@ -234,17 +300,62 @@
 			dependencies = (
 				A76528B486F9D47523D4A667 /* PBXTargetDependency */,
 				5C6CA845D5ABE11BBEE085CF /* PBXTargetDependency */,
+				B4B66BDB5B12A787FB8BAFB3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9D6EEFFECD5053C98768ED1D /* App */,
 				A810734D4F22BD85D4808402 /* Assets */,
 			);
 			name = Aster;
-			packageProductDependencies = (
-			);
 			productName = Aster;
 			productReference = CDF5B95C40E49420E3973C0D /* Aster.app */;
 			productType = "com.apple.product-type.application";
+		};
+		5A2E607E04C4F8CFF16AA16B /* AsterMCP */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "AsterMCP" */;
+			buildPhases = (
+				455B37CF067277CB34209154 /* Sources */,
+				3CD6C960F30D39895A354FB1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
+				1D3FB38E8B39D75234F62B6F /* Shared */,
+			);
+			name = AsterMCP;
+			packageProductDependencies = (
+				6086BAF2C1AD43519A16AB5A /* MCP */,
+			);
+			productName = AsterMCP;
+			productReference = C1AEE46C19B149E24D4EABA8 /* AsterMCP */;
+			productType = "com.apple.product-type.tool";
+		};
+		8B9C5B52DA01348320BD7332 /* AsterMCPTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "AsterMCPTests" */;
+			buildPhases = (
+				1DE25BBEB2789CBF0B06A759 /* Sources */,
+				B6F1E625EDE92EE3367E7485 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
+				1D3FB38E8B39D75234F62B6F /* Shared */,
+			);
+			name = AsterMCPTests;
+			packageProductDependencies = (
+				A1F139CC6E6255ACF70FAB05 /* MCP */,
+			);
+			productName = AsterMCPTests;
+			productReference = CB93E85E385AB11CEDE6E577 /* AsterMCPTests */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -275,6 +386,9 @@
 			);
 			mainGroup = 8D4C14C33AD6A0093C0F2E92;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC27F93FED78DB135292D4E1 /* Products */;
 			projectDirPath = "";
@@ -283,6 +397,8 @@
 				54586CC0DD147B6213263959 /* Aster */,
 				4426215152A4A4D601B65F1C /* AsterCLI */,
 				1DCD1B28C505110E467CB2C2 /* AsterEngine */,
+				5A2E607E04C4F8CFF16AA16B /* AsterMCP */,
+				8B9C5B52DA01348320BD7332 /* AsterMCPTests */,
 			);
 		};
 /* End PBXProject section */
@@ -329,11 +445,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#!/bin/zsh\nset -euo pipefail\ncd \"$SRCROOT\"\nresources=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH\"\nmkdir -p \"$resources/Engine\" \"$resources/Notices\"\n# Preserve Apple's extension layout; compile only the native targets in Xcode.\nrsync -a Resources/ \"$resources/\" --exclude .DS_Store\ncp Engine/*.js \"$resources/Engine/\"\ncp LICENSE \"$resources/Notices/Aster-GPL-3.0.txt\"\ncp Vendor/APW/README.md \"$resources/Notices/APW.md\"\n";
+			shellScript = "\"$SRCROOT/scripts/embed-resources.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1DE25BBEB2789CBF0B06A759 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		455B37CF067277CB34209154 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		66F7E9B4BE075656486E9F63 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -367,6 +498,12 @@
 			isa = PBXTargetDependency;
 			target = 4426215152A4A4D601B65F1C /* AsterCLI */;
 			targetProxy = 96C0730186071B606BCB1348 /* PBXContainerItemProxy */;
+		};
+		B4B66BDB5B12A787FB8BAFB3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AsterMCP;
+			target = 5A2E607E04C4F8CFF16AA16B /* AsterMCP */;
+			targetProxy = BE5F3539B5C5EE5256902EAD /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -416,6 +553,23 @@
 			};
 			name = Debug;
 		};
+		2DBA1EC8924CAAC50F6068F6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Aster.mcp-tests";
+				PRODUCT_NAME = "aster-mcp-tests";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ASTER_MCP_TEST";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
 		6C7CF58F5D050E2EEA7FCB61 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -435,6 +589,22 @@
 			};
 			name = Debug;
 		};
+		7ECF4D3C10AECA3BAC915D85 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.mcp;
+				PRODUCT_NAME = "aster-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 		9B5D365EBA4FC9AFED908E51 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -453,6 +623,39 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		9CBBE81399BB328F2B18EB94 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.zats.Aster.mcp-tests";
+				PRODUCT_NAME = "aster-mcp-tests";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) ASTER_MCP_TEST";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		B66D83D170E3048F827BBD76 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Aster.mcp;
+				PRODUCT_NAME = "aster-mcp";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
 		};
 		BB4651D34CFBA453C7237E89 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -612,6 +815,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "AsterMCP" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7ECF4D3C10AECA3BAC915D85 /* Release */,
+				B66D83D170E3048F827BBD76 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		435BBDD526A16E2DD5A3D191 /* Build configuration list for PBXNativeTarget "AsterEngine" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -630,6 +842,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "AsterMCPTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9CBBE81399BB328F2B18EB94 /* Release */,
+				2DBA1EC8924CAAC50F6068F6 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		A266ADC4F1AADA151FB01E8C /* Build configuration list for PBXNativeTarget "Aster" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -640,6 +861,30 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.12.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6086BAF2C1AD43519A16AB5A /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
+		A1F139CC6E6255ACF70FAB05 /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 803B8273E7560208A8C34C3C /* Project object */;
 }

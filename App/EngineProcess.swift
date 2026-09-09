@@ -57,6 +57,8 @@ final class EngineProcess {
         input = stdin
         output = stdout
         do {
+            // Queue app-owned access policy before the child can accept requests.
+            try writeCommand(["op": "mcp", "enabled": MCPSettings().isEnabled], to: stdin.fileHandleForWriting)
             try child.run()
         } catch {
             stdout.fileHandleForReading.readabilityHandler = nil
@@ -69,16 +71,28 @@ final class EngineProcess {
     }
 
     func send(_ operation: String, pin: String? = nil) {
-        guard isRunning, let input else { return }
-        var command = ["op": operation]
+        var command: [String: Any] = ["op": operation]
         if let pin { command["pin"] = pin }
+        sendCommand(command)
+    }
+
+    func setMCPEnabled(_ enabled: Bool) {
+        sendCommand(["op": "mcp", "enabled": enabled])
+    }
+
+    private func sendCommand(_ command: [String: Any]) {
+        guard isRunning, let input else { return }
         do {
-            var data = try JSONSerialization.data(withJSONObject: command)
-            data.append(0x0A)
-            try input.fileHandleForWriting.write(contentsOf: data)
+            try writeCommand(command, to: input.fileHandleForWriting)
         } catch {
             reportError("Could not contact the password service.")
         }
+    }
+
+    private func writeCommand(_ command: [String: Any], to handle: FileHandle) throws {
+        var data = try JSONSerialization.data(withJSONObject: command)
+        data.append(0x0A)
+        try handle.write(contentsOf: data)
     }
 
     func shutdown() async {

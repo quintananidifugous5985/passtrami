@@ -25,6 +25,14 @@ The CLI starts Aster by its bundle identifier when needed and waits for unlock. 
 
 Pairing does not guarantee a new Touch ID prompt for every request. Apple can reuse prior authentication.
 
+## MCP
+
+In **Settings… → MCP**, turn on **Enable MCP**, then select **Copy Configuration**. Add the copied configuration to a client that supports local stdio MCP servers. The command points to the helper inside the current app. Copy it again if you move the app. CLI installation is not required.
+
+MCP is off by default. It can list accounts for a domain and prepare a password for an exact account. The password travels through a temporary UNIX pipe directly to the program that uses it. MCP responses contain only account names, state, and pipe metadata. The pipe allows one delivery and expires after 60 seconds. Lock, Quit, or turning MCP off removes unused pipes.
+
+The server includes instructions and a documentation resource for agents. See [MCP access](docs/mcp.md) for setup, the tools, and a consumer example. Do not run `aster get`, `cat` the pipe, or print its contents through an agent tool: those actions expose the value in the transcript.
+
 ## Build
 
 Requires Xcode 27. The finished app includes the engine and does not require these build tools. Apple's password browser helper must be available on the Mac.
@@ -42,7 +50,7 @@ To make an optimized release:
 ./scripts/build.sh release
 ```
 
-The build script runs the JavaScriptCore, native engine, CLI, and app utility tests, then builds the app and both helpers through Xcode. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
+The build script runs the JavaScriptCore, native engine, CLI, app utility, and MCP protocol tests, then builds the app and its helpers through Xcode. Release output is `build/Release/Aster.app`, a versioned ZIP, and its SHA256 checksum. Builds are ad-hoc signed for local use; they are not Developer ID signed or notarized.
 
 Start with the [native code guide](docs/native-code.md) to follow the entry points, process boundaries, and request flow.
 
