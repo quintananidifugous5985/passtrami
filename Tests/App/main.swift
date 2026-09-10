@@ -68,4 +68,26 @@ mcpSettings.isEnabled = true
 expect(MCPSettings(defaults: defaults).isEnabled, "MCP enable choice must persist")
 mcpSettings.isEnabled = false
 expect(!MCPSettings(defaults: defaults).isEnabled, "MCP disable choice must persist")
-print("App tests passed: CLI install/uninstall, ownership, bundle display name, and MCP settings")
+let browserModel = BrowserRuntimeModel()
+var downloadRequests = 0
+browserModel.onDownload = { downloadRequests += 1 }
+browserModel.download()
+browserModel.download()
+expect(downloadRequests == 1, "Repeated clicks must not start another download")
+let progressEvent = try JSONDecoder().decode(EngineEvent.self, from: Data("""
+{"type":"browserRuntime","browserRuntime":{"phase":"downloading","fraction":0.5,"receivedBytes":1024,"totalBytes":2048}}
+""".utf8))
+browserModel.receive(progressEvent.browserRuntime!)
+expect(browserModel.status.fraction == 0.5 && browserModel.status.receivedBytes == 1024,
+       "Engine progress must reach the Settings model")
+browserModel.serviceFailed("The service stopped.")
+expect(browserModel.status.phase == .failed, "An engine failure must not leave download progress stuck")
+browserModel.download()
+expect(downloadRequests == 2 && browserModel.status.phase == .checking, "Retry must start setup again")
+browserModel.receive(BrowserRuntimeStatus(phase: .ready, appPath: "/test/Chromium.app"))
+browserModel.serviceFailed("The password session stopped.")
+browserModel.download()
+expect(browserModel.status.phase == .ready && browserModel.status.appPath == "/test/Chromium.app",
+       "Password session failure must not lose the installed runtime")
+expect(downloadRequests == 2, "Installed runtime must not be downloaded again from Settings")
+print("App tests passed: CLI installer, bundle name, MCP settings, and Chromium download state")

@@ -12,6 +12,7 @@ final class JavaScriptEngine {
     private var bridge: BridgeListener?
     private var port: UInt16 = 0
     private var browser: BrowserSession?
+    private var readyBrowserRuntime: BrowserRuntime.Status?
     private var startup: Task<Void, Never>?
     private var timers: [String: Task<Void, Never>] = [:]
     private var signals: [DispatchSourceSignal] = []
@@ -119,8 +120,11 @@ final class JavaScriptEngine {
             startup = Task { [weak self] in
                 guard let self else { return }
                 do {
-                    let executable = try await BrowserRuntime.resolve(dataDirectory: dataDirectory) { [weak self] message in
-                        self?.deliver(["type": "progress", "token": token, "message": message])
+                    let executable = try await BrowserRuntime.resolve(dataDirectory: dataDirectory) { [weak self] status in
+                        self?.updateBrowserRuntime(status)
+                        if [.checking, .downloading, .installing].contains(status.phase), let message = status.message {
+                            self?.deliver(["type": "progress", "token": token, "message": message])
+                        }
                     }
                     let session = try await BrowserSession.start(executable: executable, resources: resources,
                         dataDirectory: dataDirectory, port: port, token: token) { [weak self] in
@@ -186,6 +190,16 @@ final class JavaScriptEngine {
         guard var data = try? JSONSerialization.data(withJSONObject: event) else { return }
         data.append(0x0A)
         try? FileHandle.standardOutput.write(contentsOf: data)
+    }
+
+    private func updateBrowserRuntime(_ status: BrowserRuntime.Status) {
+        switch status.phase {
+        case .ready: readyBrowserRuntime = status
+        case .downloading, .failed: readyBrowserRuntime = nil
+        default: break
+        }
+        let current = status.phase == .idle ? readyBrowserRuntime ?? status : status
+        emit(["type": "browserRuntime", "browserRuntime": current.value])
     }
 
     private func stopBrowser() async {

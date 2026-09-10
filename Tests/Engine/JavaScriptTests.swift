@@ -109,6 +109,31 @@ func runJavaScriptTests() async throws {
         try engineExpect(SessionScript.hostname(input) == expected, "Website normalization changed")
     }
 
+    // Settings can prepare or retry Chromium without starting a PIN challenge or a second setup.
+    do {
+        let f = try ScriptFixture()
+        f.event(["type": "ready"])
+        let first = try await f.take("startBrowser")
+        f.command("prepareBrowser")
+        f.command("prepareBrowser")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Prepare duplicated the automatic browser setup")
+        f.complete(first, error: "Fixture download failure")
+        try engineExpect(try await f.status()["state"] as? String == "error", "Download failure did not finish setup")
+
+        f.command("prepareBrowser")
+        let retry = try await f.take("startBrowser")
+        f.command("prepareBrowser")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Prepare duplicated a retry")
+        f.complete(retry)
+        try f.connect("prepared", token: retry["token"] as! String)
+        try engineExpect(try await f.status()["state"] as? String == "locked", "Prepare requested an unlock")
+        f.command("prepareBrowser")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" || $0["op"] as? String == "send" },
+                         "Prepare restarted Chromium or sent a PIN challenge")
+        try engineExpect(!f.posts.contains { ($0["event"] as? [String: Any])?["type"] as? String == "pinRequired" },
+                         "Prepare opened the PIN window")
+    }
+
     // Locked list waits for the PIN result and sends no password request.
     do {
         let f = try ScriptFixture(), token = try await f.start()

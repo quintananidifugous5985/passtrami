@@ -6,7 +6,7 @@ final class ArchiveDownload: NSObject, @preconcurrency URLSessionDataDelegate {
     private let url: URL
     private let destination: URL
     private let expectedChecksum: String
-    private let progress: @MainActor (String) -> Void
+    private let progress: @MainActor (BrowserRuntime.Status) -> Void
     private var session: URLSession?
     private var task: URLSessionDataTask?
     private var file: FileHandle?
@@ -19,7 +19,7 @@ final class ArchiveDownload: NSObject, @preconcurrency URLSessionDataDelegate {
     private var created = false
     private var cancelled = false
 
-    init(url: URL, destination: URL, checksum: String, progress: @escaping @MainActor (String) -> Void) {
+    init(url: URL, destination: URL, checksum: String, progress: @escaping @MainActor (BrowserRuntime.Status) -> Void) {
         self.url = url
         self.destination = destination
         expectedChecksum = checksum
@@ -61,18 +61,27 @@ final class ArchiveDownload: NSObject, @preconcurrency URLSessionDataDelegate {
         continuation = nil
     }
 
+    private func reportProgress() {
+        let fraction = length > 0 ? min(1, Double(received) / Double(length)) : nil
+        let amount = fraction.map { "\(Int($0 * 100))%" } ?? "\(received / 1_048_576) MB"
+        progress(.init(phase: .downloading, fraction: fraction, receivedBytes: received,
+                       totalBytes: length > 0 ? length : nil, message: "Downloading Chromium: \(amount)"))
+        lastProgress = Date()
+    }
+
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
                     completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
         guard !finished else { completionHandler(.cancel); return }
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
             completionHandler(.cancel)
-            finish(EngineFailure("browser_download", "Chromium could not be downloaded. Try Unlock again."))
+            finish(EngineFailure("browser_download", "Chromium could not be downloaded. Retry the download."))
             return
         }
         do {
             file = try BrowserRuntime.createPrivateFile(destination)
             created = true
             length = response.expectedContentLength
+            reportProgress()
             completionHandler(.allow)
         } catch {
             completionHandler(.cancel)
@@ -87,11 +96,7 @@ final class ArchiveDownload: NSObject, @preconcurrency URLSessionDataDelegate {
             hasher.update(data: data)
             received += Int64(data.count)
             let now = Date()
-            if now.timeIntervalSince(lastProgress) >= 1 {
-                let amount = length > 0 ? "\(min(100, Int(Double(received) / Double(length) * 100)))%" : "\(received / 1_048_576) MB"
-                progress("Downloading Chromium: \(amount)")
-                lastProgress = now
-            }
+            if received == Int64(data.count) || now.timeIntervalSince(lastProgress) >= 0.2 { reportProgress() }
         } catch { finish(EngineFailure("browser_download", "The Chromium download could not be saved.")) }
     }
 
@@ -100,16 +105,16 @@ final class ArchiveDownload: NSObject, @preconcurrency URLSessionDataDelegate {
         if let error {
             let timeout = (error as NSError).domain == NSURLErrorDomain && (error as NSError).code == NSURLErrorTimedOut
             finish(EngineFailure("browser_download", timeout
-                ? "The Chromium download took too long. Try Unlock again."
-                : "Chromium could not be downloaded. Check your connection, then try Unlock again."))
+                ? "The Chromium download took too long. Retry the download."
+                : "Chromium could not be downloaded. Check your connection, then retry."))
             return
         }
         let checksum = hasher.finalize().map { String(format: "%02x", $0) }.joined()
         guard checksum == expectedChecksum else {
-            finish(EngineFailure("browser_checksum", "The Chromium download failed its checksum check. Try Unlock again."))
+            finish(EngineFailure("browser_checksum", "The Chromium download failed its checksum check. Retry the download."))
             return
         }
-        do { try file?.synchronize(); finish(nil) }
+        do { try file?.synchronize(); reportProgress(); finish(nil) }
         catch { finish(EngineFailure("browser_download", "The Chromium download could not be saved.")) }
     }
 }

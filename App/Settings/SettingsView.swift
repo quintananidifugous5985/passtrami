@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
+    let browserRuntime: BrowserRuntimeModel
     let onContentHeightChange: (CGFloat) -> Void
     @AppStorage("settingsPane") private var selectedPane: SettingsPane = .general
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -20,7 +21,7 @@ struct SettingsView: View {
         } detail: {
             ZStack {
                 ForEach(SettingsPane.allCases) { pane in
-                    SettingsDetailView(pane: pane, model: model, updates: updates) { height in
+                    SettingsDetailView(pane: pane, model: model, updates: updates, browserRuntime: browserRuntime) { height in
                         paneHeights[pane] = height
                     }
                     .opacity(selectedPane == pane ? 1 : 0)
@@ -55,6 +56,7 @@ private struct SettingsDetailView: View {
     let pane: SettingsPane
     let model: SettingsModel
     let updates: ApplicationUpdates
+    let browserRuntime: BrowserRuntimeModel
     let onHeightChange: (CGFloat) -> Void
 
     var body: some View {
@@ -62,6 +64,7 @@ private struct SettingsDetailView: View {
             switch pane {
             case .general:
                 StartupSettingsSection(model: model)
+                ComponentsSettingsSection(model: browserRuntime)
             case .tools:
                 CommandLineSettingsSection(model: model)
                 MCPSettingsSection(model: model)
@@ -74,9 +77,8 @@ private struct SettingsDetailView: View {
         .animation(.easeInOut(duration: 0.25), value: model.mcpEnabled)
         .labeledContentStyle(CenteredLabeledContentStyle())
         .scrollContentBackground(.hidden)
-        .buttonStyle(.glassProminent)
-        .controlSize(.large)
-        .tint(.accentColor)
+        .buttonStyle(.glass)
+        .controlSize(.regular)
         .onScrollGeometryChange(for: CGFloat.self) { geometry in
             ceil(geometry.contentSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom)
         } action: { _, height in
@@ -89,32 +91,25 @@ private struct StartupSettingsSection: View {
     @Bindable var model: SettingsModel
 
     var body: some View {
-        Section("Startup") {
-            VStack(alignment: .leading, spacing: 3) {
-                Toggle("Launch at Login", isOn: $model.launchAtLoginEnabled)
-                    .toggleStyle(.switch)
-                if let error = model.loginError {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                } else if model.loginStatus == .requiresApproval {
-                    Text("Approval is required in Login Items.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if model.loginStatus == .notFound {
-                    Text("\(Bundle.main.displayName) could not be found by macOS.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if model.loginStatus != .enabled && model.loginStatus != .notRegistered {
-                    Text("Launch at Login is unavailable.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+        Section {
+            Toggle("Launch at Login", isOn: $model.launchAtLoginEnabled)
+                .toggleStyle(.switch)
             if model.loginStatus == .requiresApproval {
                 LabeledContent("Login Items") {
                     Button("Open…", action: model.openLoginItems)
                 }
+            }
+        } header: {
+            Text("Startup")
+        } footer: {
+            if let error = model.loginError {
+                Text(error)
+            } else if model.loginStatus == .requiresApproval {
+                Text("Approval is required in Login Items.")
+            } else if model.loginStatus == .notFound {
+                Text("\(Bundle.main.displayName) could not be found by macOS.")
+            } else if model.loginStatus != .enabled && model.loginStatus != .notRegistered {
+                Text("Launch at Login is unavailable.")
             }
         }
     }
@@ -124,7 +119,7 @@ private struct CommandLineSettingsSection: View {
     let model: SettingsModel
 
     var body: some View {
-        Section("Command Line") {
+        Section {
             HStack(alignment: .center, spacing: 16) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("passtrami")
@@ -147,19 +142,19 @@ private struct CommandLineSettingsSection: View {
                 Spacer(minLength: 16)
                 if model.cliInstalled {
                     Button("Uninstall", role: .destructive, action: model.uninstallCLI)
+                        .buttonStyle(.glassProminent)
                         .tint(.red)
                 } else {
                     Button("Install…", action: model.installCLI)
                 }
             }
+        } header: {
+            Text("Command Line")
+        } footer: {
             if let error = model.cliError {
                 Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.orange)
             } else if model.didInstallCLI {
                 Text("Open a new terminal to use passtrami.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -181,11 +176,6 @@ private struct MCPSettingsSection: View {
                                 .fixedSize()
                         }
                         .frame(minHeight: 44)
-                        if let error = model.mcpError {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
                     }
                     .padding(.top, 10)
                     .transition(.opacity)
@@ -194,7 +184,12 @@ private struct MCPSettingsSection: View {
         } header: {
             Text("MCP")
         } footer: {
-            Text("Lets AI agents use passwords without including password values in session transcripts.")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Lets AI agents use passwords without including password values in session transcripts.")
+                if model.mcpEnabled, let error = model.mcpError {
+                    Text(error)
+                }
+            }
         }
     }
 }

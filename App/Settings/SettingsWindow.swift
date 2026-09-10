@@ -9,7 +9,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let model: SettingsModel
     private let didClose: () -> Void
 
-    init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, onMCPChange: @escaping (Bool) -> Void,
+    init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, browserRuntime: BrowserRuntimeModel,
+         onMCPChange: @escaping (Bool) -> Void,
          didClose: @escaping () -> Void) {
         model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
         self.didClose = didClose
@@ -34,7 +35,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         super.init(window: window)
         window.delegate = self
         window.contentViewController = NSHostingController(rootView: SettingsView(
-            model: model, updates: updates,
+            model: model, updates: updates, browserRuntime: browserRuntime,
             onContentHeightChange: { [weak self] height in self?.fitContent(height: height) }
         ))
     }

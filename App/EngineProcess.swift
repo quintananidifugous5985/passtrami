@@ -9,6 +9,7 @@ struct EngineEvent: Decodable, Sendable {
     let type: String
     let state: EngineState?
     let message: String?
+    var browserRuntime: BrowserRuntimeStatus? = nil
 }
 
 @MainActor

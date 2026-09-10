@@ -3,6 +3,27 @@ import Foundation
 
 @MainActor
 final class BrowserRuntime {
+    struct Status {
+        enum Phase: String { case idle, checking, downloading, installing, ready, failed }
+
+        let phase: Phase
+        var fraction: Double?
+        var receivedBytes: Int64?
+        var totalBytes: Int64?
+        var appPath: String?
+        var message: String?
+
+        var value: [String: Any] {
+            var value: [String: Any] = ["phase": phase.rawValue]
+            if let fraction { value["fraction"] = fraction }
+            if let receivedBytes { value["receivedBytes"] = receivedBytes }
+            if let totalBytes { value["totalBytes"] = totalBytes }
+            if let appPath { value["appPath"] = appPath }
+            if let message { value["message"] = message }
+            return value
+        }
+    }
+
     static let release = "152.0.7977.82-1.1"
     private static let version = "152.0.7977.82"
     private static let archiveURL = URL(string: "https://github.com/ungoogled-software/ungoogled-chromium-macos/releases/download/\(release)/ungoogled-chromium_\(release)_arm64-macos.dmg")!
@@ -82,7 +103,7 @@ final class BrowserRuntime {
     }
 
     static func downloadArchive(from url: URL, to destination: URL, checksum: String,
-                                progress: @escaping @MainActor (String) -> Void) async throws {
+                                progress: @escaping @MainActor (Status) -> Void) async throws {
         try checkCancellation()
         let download = ArchiveDownload(url: url, destination: destination, checksum: checksum, progress: progress)
         try await withTaskCancellationHandler {
@@ -104,7 +125,20 @@ final class BrowserRuntime {
         }
     }
 
-    static func resolve(dataDirectory: URL, progress: @escaping @MainActor (String) -> Void) async throws -> URL {
+    static func resolve(dataDirectory: URL, progress: @escaping @MainActor (Status) -> Void) async throws -> URL {
+        do {
+            let executable = try await resolveExecutable(dataDirectory: dataDirectory, progress: progress)
+            progress(.init(phase: .ready, appPath: executable.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path))
+            return executable
+        } catch {
+            let failure = error as? EngineFailure ?? EngineFailure("browser_setup", "Chromium could not be prepared. Retry the download.")
+            progress(.init(phase: Task.isCancelled || failure.code == "cancelled" ? .idle : .failed,
+                           message: Task.isCancelled || failure.code == "cancelled" ? nil : failure.message))
+            throw failure
+        }
+    }
+
+    private static func resolveExecutable(dataDirectory: URL, progress: @escaping @MainActor (Status) -> Void) async throws -> URL {
         try checkCancellation()
         #if !os(macOS) || !arch(arm64)
         throw EngineFailure("browser_platform", "Passtrami requires an Apple silicon Mac.")
@@ -113,9 +147,9 @@ final class BrowserRuntime {
         let cache = dataDirectory.appendingPathComponent("Browser", isDirectory: true)
         let versionDirectory = cache.appendingPathComponent(release, isDirectory: true)
         let cachedApp = versionDirectory.appendingPathComponent("Chromium.app")
+        progress(.init(phase: .checking, message: "Checking Chromium…"))
         if manager.fileExists(atPath: cachedApp.path) {
             do {
-                progress("Checking Chromium…")
                 return try await validate(cachedApp)
             } catch { try checkCancellation() }
         }
@@ -127,11 +161,11 @@ final class BrowserRuntime {
         let package = staging.appendingPathComponent("package", isDirectory: true)
         var attachStarted = false
         do {
-            progress("Downloading Chromium…")
+            progress(.init(phase: .downloading, receivedBytes: 0, message: "Downloading Chromium…"))
             let archive = staging.appendingPathComponent("browser.dmg")
             try await downloadArchive(from: archiveURL, to: archive, checksum: checksum, progress: progress)
             try checkCancellation()
-            progress("Installing Chromium…")
+            progress(.init(phase: .installing, message: "Installing Chromium…"))
             try manager.createDirectory(at: mount, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
             try manager.createDirectory(at: package, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
             attachStarted = true
@@ -144,7 +178,7 @@ final class BrowserRuntime {
             try checkCancellation()
             _ = try await runSystemCheck("Chromium Finder metadata cleanup", command: "/usr/bin/xattr",
                 arguments: ["-dr", "com.apple.FinderInfo", package.appendingPathComponent("Chromium.app").path])
-            progress("Checking Chromium…")
+            progress(.init(phase: .checking, message: "Checking Chromium…"))
             _ = try await validate(package.appendingPathComponent("Chromium.app"))
             try checkCancellation()
             if manager.fileExists(atPath: versionDirectory.path) { try manager.removeItem(at: versionDirectory) }

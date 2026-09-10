@@ -5,9 +5,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let engine = EngineProcess()
     private let pinWindow = PINWindow()
     private let launchAtLogin = LaunchAtLoginController()
+    private let browserRuntime = BrowserRuntimeModel()
     private lazy var updates = ApplicationUpdates()
     private var isSettingsVisible = false
-    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, onMCPChange: { [weak self] enabled in
+    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, browserRuntime: browserRuntime, onMCPChange: { [weak self] enabled in
         self?.engine.setMCPEnabled(enabled)
     }) { [weak self] in
         self?.isSettingsVisible = false
@@ -24,8 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         createMenu()
         updates.onVisibilityChange = { [weak self] in self?.updateActivationPolicy() }
         engine.onEvent = { [weak self] event in self?.handle(event) }
+        browserRuntime.onDownload = { [weak self] in
+            guard let self else { return }
+            if !engine.isRunning { startEngine() }
+            engine.send("prepareBrowser")
+        }
         pinWindow.onSubmit = { [weak self] pin in self?.engine.send("pin", pin: pin) }
-        pinWindow.onCancel = { [weak self] in self?.engine.send("lock") }
+        pinWindow.onCancel = { [weak self] in self?.lock() }
         startEngine()
     }
 
@@ -79,10 +85,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handle(_ event: EngineEvent) {
         switch event.type {
+        case "browserRuntime":
+            if let status = event.browserRuntime { browserRuntime.receive(status) }
         case "pinRequired": pinWindow.present()
         case "pinError": pinWindow.showError(event.message)
         case "state":
             guard let state = event.state else { return }
+            if state == .error { browserRuntime.serviceFailed(event.message ?? "The password service stopped. Try again.") }
             updateMenu(state, message: event.message)
             if state == .unlocked {
                 UserDefaults.standard.set(true, forKey: "didCompletePairing")
@@ -120,7 +129,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         engine.send("unlock")
     }
 
-    @objc private func lock() { engine.send("lock") }
+    @objc private func lock() {
+        firstLockedEventHandled = true
+        engine.send("lock")
+    }
     @objc private func showSettings() {
         isSettingsVisible = true
         updateActivationPolicy()

@@ -191,18 +191,33 @@ func runRuntimeTests() async throws {
 
     let checksum = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     try await runtimeDownloadTest { url, file in
-        try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { _ in })
+        var progress: [BrowserRuntime.Status] = []
+        try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { progress.append($0) })
         try runtimeExpect(try Data(contentsOf: file) == Data("abc".utf8), "Download bytes changed.")
         let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
         try runtimeExpect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600, "Download file is not private.")
+        try runtimeExpect(progress.first?.receivedBytes == 0 && progress.first?.fraction == 0,
+                          "Download progress did not begin at zero.")
+        try runtimeExpect(progress.last?.receivedBytes == 3 && progress.last?.fraction == 1,
+                          "Download progress did not reach the full response length.")
+        try runtimeExpect(progress.allSatisfy { $0.phase == .downloading && $0.totalBytes == 3 && $0.appPath == nil },
+                          "Download progress used a wrong phase, total, or installed path.")
+        let fractions = progress.compactMap(\.fraction)
+        try runtimeExpect(fractions == fractions.sorted() && fractions.allSatisfy { (0...1).contains($0) },
+                          "Download progress went backward or left its range.")
+        let payload = progress.last!.value
+        try runtimeExpect(payload["phase"] as? String == "downloading" && payload["receivedBytes"] as? Int64 == 3 && payload["totalBytes"] as? Int64 == 3,
+                          "Download progress lost its structured fields.")
     }
     try await runtimeDownloadTest(body: "wrong archive") { url, file in
         try await runtimeFailure("browser_checksum") { try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { _ in }) }
         try runtimeExpect(!FileManager.default.fileExists(atPath: file.path), "Checksum failure left an archive.")
     }
     try await runtimeDownloadTest(status: 503) { url, file in
-        try await runtimeFailure("browser_download") { try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { _ in }) }
+        var progress: [BrowserRuntime.Status] = []
+        try await runtimeFailure("browser_download") { try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { progress.append($0) }) }
         try runtimeExpect(!FileManager.default.fileExists(atPath: file.path), "HTTP failure created an archive.")
+        try runtimeExpect(progress.isEmpty, "HTTP failure reported successful download progress.")
     }
     try await runtimeDownloadTest { url, file in
         try Data("existing".utf8).write(to: file)
@@ -211,16 +226,34 @@ func runRuntimeTests() async throws {
     }
     try await runtimeDownloadTest(body: String(repeating: "p", count: 8_192), hold: true) { url, file in
         let download = RuntimeDownloadTask()
+        var progress: [BrowserRuntime.Status] = []
         download.task = Task {
-            try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: { _ in download.task?.cancel() })
+            try await BrowserRuntime.downloadArchive(from: url, to: file, checksum: checksum, progress: {
+                progress.append($0)
+                if ($0.receivedBytes ?? 0) > 0 { download.task?.cancel() }
+            })
         }
         try await runtimeFailure("cancelled") { try await download.task?.value }
         download.task = nil
         try runtimeExpect(!FileManager.default.fileExists(atPath: file.path), "Cancellation left a partial archive.")
+        try runtimeExpect(progress.contains { ($0.receivedBytes ?? 0) > 0 } && progress.allSatisfy { ($0.fraction ?? 0) < 1 },
+                          "Cancelled download did not report partial progress.")
     }
-    let cancelledSetup = Task { try await BrowserRuntime.resolve(dataDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), progress: { _ in }) }
+    var setupProgress: [BrowserRuntime.Status] = []
+    let cancelledSetup = Task { try await BrowserRuntime.resolve(dataDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString), progress: { setupProgress.append($0) }) }
     cancelledSetup.cancel()
     try await runtimeFailure("cancelled") { _ = try await cancelledSetup.value }
+    try runtimeExpect(setupProgress.count == 1 && setupProgress[0].phase == .idle && setupProgress[0].message == nil,
+                      "Cancelled setup reported a failure instead of idle.")
+    let invalidDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("passtrami-invalid-runtime-" + UUID().uuidString)
+    try Data("fixture file".utf8).write(to: invalidDirectory)
+    defer { try? FileManager.default.removeItem(at: invalidDirectory) }
+    setupProgress.removeAll()
+    try await runtimeFailure("browser_setup") {
+        _ = try await BrowserRuntime.resolve(dataDirectory: invalidDirectory, progress: { setupProgress.append($0) })
+    }
+    try runtimeExpect(setupProgress.last?.phase == .failed && setupProgress.last?.message != nil && setupProgress.last?.appPath == nil,
+                      "Setup failure did not report a separate runtime error.")
     for mode in ["ready", "wait-ready", "wait-cdp"] { try await runtimeBrowserTest(mode: mode) }
     print("Runtime download, process, CDP, and cleanup checks passed.")
 }

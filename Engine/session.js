@@ -240,6 +240,7 @@
       shuttingDown = true;
       await lock(); post({ op: 'shutdown' });
     } else if (value.op === 'lock') await lock();
+    else if (value.op === 'prepareBrowser') await launch();
     else if (value.op === 'unlock') await requestUnlock(true);
     else if (value.op === 'pin' && typeof value.pin === 'string' && /^\d{6}$/.test(value.pin) && nativeState === 'MSG1Set') {
       pinSubmitted = true; send({ op: 'pin', pin: value.pin });
