@@ -81,6 +81,7 @@ signature=$(python3 scripts/validate-appcast.py "$assets/appcast.xml" "$reposito
 "$tools/sign_update" --account "$bundle_id" --verify "$archive" "$signature"
 rm "$assets/${archive_name:r}.md"
 (cd "$assets" && shasum -a 256 "$archive_name" > "$archive_name.sha256")
+cp "$archive" "$assets/Passtrami.zip"
 ditto "$app" "$assets/Passtrami.app"
 cp "$work/notarization.json" "$assets/notarization.json"
 git rev-parse HEAD > "$assets/source-commit.txt"

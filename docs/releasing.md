@@ -23,7 +23,7 @@ TEAM_ID='TEAMID' \
 
 This prepares the pinned Apple extension, runs the existing tests, archives all Xcode targets, and exports a Developer ID app. It requires accepted notarization, staples and validates the ticket, creates the final ZIP, and uses Sparkle's `generate_appcast` to sign it and embed the release notes. It also verifies the archive signature with Sparkle. Any failed step stops the release.
 
-Output is `build/Distribution/vVERSIONbBUILD/`: the app, versioned ZIP, checksum, `appcast.xml`, notarization result, and source commit. Existing output is never overwritten. The script does not create tags, push source, or publish a release.
+Output is `build/Distribution/vVERSIONbBUILD/`: the app, versioned ZIP, an identical `Passtrami.zip` copy, checksum, `appcast.xml`, notarization result, and source commit. Existing output is never overwritten. The script does not create tags, push source, or publish a release.
 
 ## Publish
 
@@ -36,8 +36,11 @@ gh release create vVERSIONbBUILD --repo zats/passtrami --verify-tag \
   --title 'Passtrami VERSION (BUILD)' --notes-file /path/to/notes.md \
   build/Distribution/vVERSIONbBUILD/Passtrami-VERSION-bBUILD-macOS-arm64.zip \
   build/Distribution/vVERSIONbBUILD/Passtrami-VERSION-bBUILD-macOS-arm64.zip.sha256 \
+  build/Distribution/vVERSIONbBUILD/Passtrami.zip \
   build/Distribution/vVERSIONbBUILD/appcast.xml
 ```
+
+Upload `Passtrami.zip` with every release. The README uses [GitHub’s stable direct-download URL](https://github.com/zats/passtrami/releases/latest/download/Passtrami.zip), which selects that asset from the latest release. Sparkle continues to use the versioned ZIP.
 
 The **Publish update feed** workflow gets the latest stable release, checks the feed's version, download URL, size, and signature format against the release asset, then deploys `appcast.xml` with GitHub's Pages actions. It never deploys a prerelease. Manual workflow runs also select the latest stable release. Cryptographic archive verification occurs during local preparation and again in the installed app.
 
