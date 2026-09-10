@@ -47,6 +47,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         model.refresh()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
+        window?.orderFrontRegardless()
         NSApp.activate()
     }
 
