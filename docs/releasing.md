@@ -4,7 +4,8 @@ The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami
 
 ## One-time setup
 
-- Install a Developer ID Application identity for the Apple Developer team on the release Mac.
+- Install a Developer ID Application identity for the Apple Developer team on the release Mac. Create and download a **Developer ID** provisioning profile for `io.zats.Passtrami` with CloudKit, the `iCloud.io.zats.Passtrami` container, and production push notifications. The profile must allow Production CloudKit and use the release signing certificate. A Mac development profile is not sufficient.
+- Deploy the [companion record schema and indexes](../Companion/README.md) to the CloudKit Production environment before distributing the companion feature.
 - Store notarization credentials with `xcrun notarytool store-credentials PROFILE`. Use the interactive prompts; do not put passwords in scripts or commit them.
 - Run `python3 scripts/sparkle-tools.py`, then use the printed tool directory to run `generate_keys --account io.zats.Passtrami`. The public key must match `SUPublicEDKey` in `Info.plist`. Keep the private key in the Keychain. Do not replace it for each release or export it to GitHub Actions.
 - In the repository's **Settings → Pages**, select **GitHub Actions** as the source and enforce HTTPS. In the `github-pages` environment, permit the `main` branch and tags matching `v*b*`. Release events run from a tag. This account's Pages site uses the `zats.io` domain.
@@ -18,10 +19,11 @@ Increase `CFBundleVersion` in `Info.plist` for every release. Set `CFBundleShort
 ```sh
 SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
 TEAM_ID='TEAMID' \
+DEVELOPER_ID_PROFILE='/path/to/Passtrami.provisionprofile' \
 ./scripts/prepare-release.sh /path/to/notes.md PROFILE
 ```
 
-This prepares the pinned Apple extension, runs the existing tests, archives all Xcode targets, and exports a Developer ID app. It requires accepted notarization, staples and validates the ticket, creates the final ZIP, and uses Sparkle's `generate_appcast` to sign it and embed the release notes. It also verifies the archive signature with Sparkle. Any failed step stops the release.
+The script first checks and installs the supplied provisioning profile. A missing, expired, or mismatched profile stops preparation before tests or archiving. It prepares the pinned Apple extension, runs the tests, archives the Mac app and its helpers, and exports a Developer ID app with that profile and Production CloudKit access. Helpers do not receive the app's profile. It requires accepted notarization, staples and validates the ticket, creates the final ZIP, and uses Sparkle's `generate_appcast` to sign it and embed the release notes. It also verifies the archive signature with Sparkle. Any failed step stops the release.
 
 Output is `build/Distribution/vVERSIONbBUILD/`: the app, versioned ZIP, an identical `Passtrami.zip` copy, checksum, `appcast.xml`, notarization result, and source commit. Existing output is never overwritten. The script does not create tags, push source, or publish a release.
 

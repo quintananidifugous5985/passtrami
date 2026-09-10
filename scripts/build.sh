@@ -24,6 +24,8 @@ fi
 app="$output_dir/Passtrami.app"
 python3 scripts/prepare-extension.py
 Tests/Engine/run.sh
+Tests/Companion/run.sh
+Tests/PreferenceWindow/run.sh
 Tests/CLI/run.sh
 Tests/App/run.sh
 Tests/MCP/run.sh

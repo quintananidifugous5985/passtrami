@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, tools, about
+    case general, tools, devices, about
 
     var id: Self { self }
 
@@ -10,6 +10,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "General"
         case .tools: "Tools"
+        case .devices: "Devices"
         case .about: "About"
         }
     }
@@ -18,6 +19,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape.fill"
         case .tools: "wrench.and.screwdriver.fill"
+        case .devices: "iphone"
         case .about: "info.circle.fill"
         }
     }
@@ -26,6 +28,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .gray
         case .tools: .orange
+        case .devices: .green
         case .about: .blue
         }
     }

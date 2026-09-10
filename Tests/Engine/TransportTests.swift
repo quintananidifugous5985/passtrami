@@ -2,6 +2,47 @@ import Darwin
 import Foundation
 
 @MainActor
+private func runEngineInstanceLockTests() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("passtrami-owner-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let path = directory.appendingPathComponent("engine.lock").path
+
+    var first: EngineInstanceLock? = try EngineInstanceLock(directory: directory)
+    var info = stat()
+    try engineExpect(lstat(path, &info) == 0 && info.st_mode & 0o777 == 0o600,
+                     "The engine lock must have owner-only permissions.")
+    let inode = info.st_ino
+    try withExtendedLifetime(first) {
+        do {
+            _ = try EngineInstanceLock(directory: directory)
+            throw EngineFailure("test", "Two engine owners acquired the same directory.")
+        } catch let error as EngineFailure {
+            try engineExpect(error.code == "already_running", "Engine contention did not report an existing owner.")
+        }
+    }
+    first = nil
+    let next = try EngineInstanceLock(directory: directory)
+    try withExtendedLifetime(next) {
+        try engineExpect(lstat(path, &info) == 0 && info.st_ino == inode,
+                         "Releasing the engine lock must not replace its inode.")
+        do {
+            _ = try EngineInstanceLock(directory: directory)
+            throw EngineFailure("test", "A replacement owner did not retain its lock.")
+        } catch let error as EngineFailure {
+            try engineExpect(error.code == "already_running", "The replacement engine did not own the directory.")
+        }
+    }
+
+    do {
+        _ = try EngineInstanceLock(directory: directory.appendingPathComponent("missing"))
+        throw EngineFailure("test", "An invalid lock directory was accepted.")
+    } catch let error as EngineFailure {
+        try engineExpect(error.code == "engine_lock", "Invalid lock path did not fail safely.")
+    }
+}
+
+@MainActor
 private func transportWait(_ message: String, until condition: () -> Bool) async throws {
     let deadline = ContinuousClock.now + .seconds(5)
     while !condition() {
@@ -248,7 +289,8 @@ private func runWebSocketTransportTests() async throws {
 
 @MainActor
 func runTransportTests() async throws {
+    try runEngineInstanceLockTests()
     try await runUnixTransportTests()
     try await runWebSocketTransportTests()
-    print("Native CLI and WebSocket transport checks passed.")
+    print("Native engine ownership, CLI, and WebSocket transport checks passed.")
 }

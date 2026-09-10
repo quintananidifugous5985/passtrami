@@ -1,0 +1,30 @@
+DEFINE SCHEMA
+    RECORD TYPE Users (
+        roles LIST<INT64>,
+        GRANT WRITE TO "_creator",
+        GRANT READ TO "_world"
+    );
+
+    // These types have no public database permissions. Apps use the private database.
+    RECORD TYPE PasstramiPair (
+        "___recordID" REFERENCE QUERYABLE,
+        pairID STRING,
+        state STRING,
+        offer BYTES,
+        phone BYTES,
+        proof BYTES,
+        expiresAt TIMESTAMP,
+        lastOperation STRING
+    );
+
+    RECORD TYPE PasstramiRequest (
+        "___recordID" REFERENCE QUERYABLE,
+        pairID STRING QUERYABLE,
+        status STRING QUERYABLE,
+        createdAt TIMESTAMP SORTABLE,
+        requestID STRING,
+        request BYTES,
+        response BYTES,
+        decisionAt TIMESTAMP,
+        consumedAt TIMESTAMP
+    );

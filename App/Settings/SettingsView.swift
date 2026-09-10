@@ -4,6 +4,7 @@ struct SettingsView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
     let browserRuntime: BrowserRuntimeModel
+    let companion: CompanionService
     let onContentHeightChange: (CGFloat) -> Void
     @AppStorage("settingsPane") private var selectedPane: SettingsPane = .general
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -21,7 +22,8 @@ struct SettingsView: View {
         } detail: {
             ZStack {
                 ForEach(SettingsPane.allCases) { pane in
-                    SettingsDetailView(pane: pane, model: model, updates: updates, browserRuntime: browserRuntime) { height in
+                    SettingsDetailView(pane: pane, model: model, updates: updates, browserRuntime: browserRuntime,
+                                       companion: companion) { height in
                         paneHeights[pane] = height
                     }
                     .opacity(selectedPane == pane ? 1 : 0)
@@ -58,6 +60,7 @@ private struct SettingsDetailView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
     let browserRuntime: BrowserRuntimeModel
+    let companion: CompanionService
     let onHeightChange: (CGFloat) -> Void
 
     var body: some View {
@@ -69,6 +72,8 @@ private struct SettingsDetailView: View {
             case .tools:
                 CommandLineSettingsSection(model: model)
                 MCPSettingsSection(model: model)
+            case .devices:
+                DevicesSettingsSection(companion: companion, model: model)
             case .about:
                 AboutSettingsSection()
                 UpdatesSettingsSection(updates: updates)
@@ -76,6 +81,8 @@ private struct SettingsDetailView: View {
         }
         .formStyle(.grouped)
         .animation(.easeInOut(duration: 0.25), value: model.mcpEnabled)
+        .animation(.easeInOut(duration: 0.25), value: companion.pairedDevice?.id)
+        .animation(.easeInOut(duration: 0.25), value: companion.pairingCode)
         .labeledContentStyle(CenteredLabeledContentStyle())
         .scrollContentBackground(.hidden)
         .buttonStyle(.glass)

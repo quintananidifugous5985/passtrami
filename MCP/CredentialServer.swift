@@ -5,26 +5,37 @@ import MCP
 enum CredentialServer {
     static let resourceURI = "passtrami://docs/credential-access"
     static let instructions = """
+    Use Passtrami when a user-authorized task needs a password saved in Apple Passwords, whether
+    it uses a browser, application, command-line tool, or script. The user does not need to name
+    Passtrami explicitly. Use only the intended service and account; never ask the
+    user to paste a password into the conversation.
     Read passtrami://docs/credential-access before using credentials. This server returns account names and
     one-use pipe metadata, never passwords. Prepare the consumer first, then call prepare_password and
     immediately run that consumer. Read the pipe only inside the consuming process; never print, log,
     inspect, encode, or return its contents through any agent tool. Do not use passtrami get, cat, shell
     substitution, or a file-reading tool to obtain a password. Passwords must remain outside model
-    messages and session transcripts. Use only the user-authorized website and account. The user
-    completes unlock and system approval in Passtrami. Revoke unused leases with revoke_password.
+    messages and session transcripts. The user unlocks Passtrami on the Mac and approves access
+    there or on the paired iPhone. Revoke unused
+    leases with revoke_password.
     """
 
     static let guide = """
     # Credential access
 
-    This local MCP server controls Passtrami. It does not return password values. Enable MCP in Passtrami
-    Settings before calling credential tools. The app starts when needed. The user completes any
-    unlock or system approval in Passtrami; do not request a PIN or password through MCP.
+    Use Passtrami when a user-authorized task needs a password saved in Apple Passwords, whether
+    it uses a browser, application, command-line tool, or script. Select these
+    tools when needed even if the user did not mention Passtrami. Access must stay within the
+    intended service and account. Never ask the user to paste a password into the conversation.
+
+    Enable MCP in Passtrami Settings before calling credential tools. The app starts when needed.
+    The tools return account names and delivery metadata, never password values. The user completes any
+    unlock on the Mac and approves access there or on the paired iPhone; do not request a PIN or
+    password through MCP.
 
     ## Complete flow
     1. Call status. If enabled is false, ask the user to enable MCP in Passtrami Settings.
-    2. Use list_accounts with the intended domain to choose the exact account. Account names are
-       metadata and may appear in the transcript. Stay within the user's requested site and account.
+    2. Use the specified domain and username. If the account is unknown, call list_accounts for the
+       intended domain. Ask the user to resolve any ambiguity. Account names may appear in the transcript.
     3. Prepare the application code that will use the password. It must accept a pipe path, read its
        bytes internally, send the password only to the intended service, and return a nonsecret result.
        Do this before requesting the password because the lease lasts only 60 seconds.
@@ -66,6 +77,7 @@ enum CredentialServer {
     A failed, expired, or interrupted read needs a new prepare_password call.
 
     ## Limits
+    These tools provide saved passwords. Verification codes are not supported.
     Passwords longer than 512 UTF-8 bytes are rejected so delivery is one atomic pipe write.
     The pipe is local and readable by the current user. This design keeps passwords out of normal
     MCP responses and transcripts when the consumer follows these rules. It does not isolate a secret
@@ -81,7 +93,7 @@ enum CredentialServer {
         }
         await server.withMethodHandler(ListResources.self) { _ in
             .init(resources: [.init(name: "Credential access", uri: resourceURI,
-                                   description: "Full workflow for using a password without returning it to the agent.",
+                                   description: "When to use Passtrami and how to supply a saved password to an application, service, command-line tool, or script without exposing it to the agent.",
                                    mimeType: "text/markdown")])
         }
         await server.withMethodHandler(ReadResource.self) { params in
@@ -142,10 +154,10 @@ enum CredentialServer {
     static let tools: [Tool] = [
         .init(name: "status", description: "Check whether MCP is enabled and whether Passtrami is locked. No password access.",
               inputSchema: schema([:]), annotations: .init(readOnlyHint: true, openWorldHint: false)),
-        .init(name: "list_accounts", description: "List usernames saved for a domain. Waits for user authentication if needed. Returns names only.",
+        .init(name: "list_accounts", description: "Find accounts saved in Apple Passwords for the intended service's domain when the user's task needs a password and the username is unknown. Returns names only; ask the user if the account choice is ambiguous. Waits for user authentication if needed.",
               inputSchema: schema(["domain": ["type": "string", "minLength": 1]]),
               annotations: .init(readOnlyHint: true, openWorldHint: false)),
-        .init(name: "prepare_password", description: "After user authentication, prepare a one-use UTF-8 password pipe for an exact domain and username. Read credential-access documentation first. Returns metadata only; the consumer must read the pipe internally within 60 seconds without printing it.",
+        .init(name: "prepare_password", description: "Use a password saved in Apple Passwords when a user-authorized task needs one, whether it uses a browser, application, command-line tool, or script. Takes the exact domain and username and waits for user authentication. Read the credential-access guide and prepare the consumer first. Returns a one-use UTF-8 pipe's metadata only; the consumer must read it internally within 60 seconds without exposing the password to the agent.",
               inputSchema: schema(["domain": ["type": "string", "minLength": 1],
                                    "username": ["type": "string", "minLength": 1]]),
               annotations: .init(destructiveHint: false, openWorldHint: false)),

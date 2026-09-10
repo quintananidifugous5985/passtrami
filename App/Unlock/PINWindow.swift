@@ -21,7 +21,7 @@ final class PINWindow: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         // Matches LAAuthWindow's style mask in coreautha. See docs/pin-dialog.md.
         let alertStyle = NSWindow.StyleMask(rawValue: UInt(1) << 33)
         window = PINPanel(contentRect: NSRect(x: 0, y: 0, width: 260, height: 240),
-                          styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, alertStyle],
+                          styleMask: [.titled, .fullSizeContentView, alertStyle],
                           backing: .buffered, defer: false)
         super.init()
         window.title = "Unlock \(Bundle.main.displayName)"
@@ -34,6 +34,8 @@ final class PINWindow: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         }
         window.isReleasedWhenClosed = false
         window.delegate = self
+        NotificationCenter.default.addObserver(self, selector: #selector(applicationDidBecomeActive),
+                                               name: NSApplication.didBecomeActiveNotification, object: NSApp)
         window.isFloatingPanel = true
         window.level = .floating
         window.hidesOnDeactivate = false
@@ -97,8 +99,19 @@ final class PINWindow: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     }
 
     private func focusCodeField() {
-        window.orderFrontRegardless()
-        window.makeKey()
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
+        window.makeFirstResponder(field)
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        guard field.isEnabled else { return }
+        window.makeFirstResponder(field)
+    }
+
+    @objc private func applicationDidBecomeActive(_ notification: Notification) {
+        guard window.isVisible, field.isEnabled else { return }
+        window.makeKeyAndOrderFront(nil)
         window.makeFirstResponder(field)
     }
 

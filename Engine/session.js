@@ -7,16 +7,45 @@
   const waiters = new Set();
   let sequence = 0, phase = 'starting', phaseMessage, nativeState = '', token = null;
   let bridge = null, browser = false, launching = null, stopping = null, generation = 0;
+  let sessionRevision = 0;
   let shuttingDown = false, appUnlockRequested = false, challengeSent = false, pinSubmitted = false;
-  let pending = null, queue = Promise.resolve();
+  let pending = null, queue = Promise.resolve(), activeAccess = null;
 
   function post(message) { __nativePost(JSON.stringify(message)); }
-  function native(op, values = {}) {
+  function native(op, values = {}, client) {
     return new Promise((resolve, reject) => {
       const id = String(++sequence);
-      operations.set(id, { resolve, reject });
+      if (client?.cancelled) { reject(new RequestError('cancelled', 'Request cancelled.')); return; }
+      const operation = { op, resolve, reject };
+      operations.set(id, operation);
+      operation.removeCancel = client?.onCancel(() => {
+        cancelAuthorization(id, new RequestError('cancelled', 'Request cancelled.'));
+      });
+      if (op === 'authorizePassword') {
+        operation.timer = later(() => {
+          cancelAuthorization(id, new RequestError('timeout', 'Password approval timed out. Try again.'));
+        }, 120000);
+      }
       post({ op, id, ...values });
     });
+  }
+  function takeOperation(id) {
+    const operation = operations.get(id);
+    if (!operation) return;
+    operations.delete(id);
+    cancelTimer(operation.timer); operation.removeCancel?.();
+    return operation;
+  }
+  function cancelAuthorization(id, error) {
+    const operation = takeOperation(id);
+    if (!operation) return;
+    post({ op: 'cancelAuthorization', id });
+    operation.reject(error);
+  }
+  function cancelAuthorizations(error) {
+    for (const [id, operation] of operations) {
+      if (operation.op === 'authorizePassword') cancelAuthorization(id, error);
+    }
   }
   function later(callback, milliseconds) {
     const id = String(++sequence);
@@ -65,7 +94,11 @@
     const previous = nativeState;
     if (previous === state) return;
     nativeState = state;
-    if (previous === 'SessionKeySet') rejectPending(new RequestError('locked', 'Apple locked the password session.'));
+    if (previous === 'SessionKeySet') {
+      sessionRevision++;
+      const error = new RequestError('locked', 'Apple locked the password session.');
+      rejectPending(error); cancelAuthorizations(error);
+    }
     if (state === 'SessionKeySet') {
       pinSubmitted = false; appUnlockRequested = false; challengeSent = false;
       setPhase('unlocked'); resolveWaiters();
@@ -125,6 +158,7 @@
     });
   }
   function lock(error = new RequestError('cancelled', 'The password session was locked or cancelled.'), finalPhase = 'locked') {
+    cancelAuthorizations(error);
     if (stopping) return stopping;
     appUnlockRequested = false; challengeSent = false; pinSubmitted = false; generation++; token = null;
     resolveWaiters(error); rejectPending(error); browser = false;
@@ -157,14 +191,43 @@
     if (!list && (!username || username.includes('\n'))) throw new RequestError('invalid_request', 'Username is required.');
     const message = list ? accountsMessage(domain) : passwordMessage(domain, username);
     for (let attempt = 0; attempt < 2; attempt++) {
+      if (stopping) await stopping;
       await ensureUnlocked(client);
+      const currentGeneration = generation;
+      const currentSessionRevision = sessionRevision;
+      const authorization = list ? null : await native('authorizePassword', { domain, username }, client);
+      if (client.cancelled) throw new RequestError('cancelled', 'Request cancelled.');
+      if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') {
+        throw new RequestError('locked', 'The password session changed. Try again.');
+      }
       let data;
-      try { data = await nativeRequest(message, client); }
+      const accessID = authorization?.remote === true ? __uuid() : null;
+      try {
+        if (accessID) {
+          activeAccess = { id: accessID, expired: false };
+          await native('beginPasswordAccess', { accessID });
+        }
+        try {
+          if (activeAccess?.expired) throw new RequestError('timeout', 'Password access timed out. Try again.');
+          if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') throw new RequestError('locked', 'The password session changed. Try again.');
+          data = await nativeRequest(message, client);
+        } finally {
+          if (accessID) {
+            try { await native('endPasswordAccess', { accessID }); }
+            finally { activeAccess = null; }
+          }
+        }
+      }
       catch (error) {
+        activeAccess = null;
         // End the old native session before another request can receive a late reply.
         await lock(error);
         if (error.code !== 'locked' || attempt) throw error;
         continue;
+      }
+      if (client.cancelled) throw new RequestError('cancelled', 'Request cancelled.');
+      if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') {
+        throw new RequestError('locked', 'The password session changed. Try again.');
       }
       try {
         if (list) return { ok: true, usernames: usernamesFrom(data, domain) };
@@ -272,11 +335,17 @@
         const callback = timers.get(event.id); timers.delete(event.id); callback?.(); break;
       }
       case 'nativeResult': {
-        const operation = operations.get(event.id); operations.delete(event.id);
+        const operation = takeOperation(event.id);
         if (event.error) operation?.reject(new RequestError(event.error.code, event.error.message));
         else operation?.resolve(event.result);
         break;
       }
+      case 'passwordAccessExpired':
+        if (activeAccess?.id === event.accessID) {
+          activeAccess.expired = true;
+          rejectPending(new RequestError('timeout', 'Password access timed out. Try again.'));
+        }
+        break;
       }
     }
   };

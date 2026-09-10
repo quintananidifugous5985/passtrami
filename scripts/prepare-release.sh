@@ -3,11 +3,13 @@ set -euo pipefail
 project_root=${0:A:h:h}
 cd "$project_root"
 if (( $# != 2 )); then
-  print -u2 'Usage: SIGNING_IDENTITY="Developer ID Application: ..." TEAM_ID=... ./scripts/prepare-release.sh NOTES.md NOTARY_PROFILE'
+  print -u2 'Usage: SIGNING_IDENTITY="Developer ID Application: ..." TEAM_ID=... DEVELOPER_ID_PROFILE=/path/to/profile.provisionprofile ./scripts/prepare-release.sh NOTES.md NOTARY_PROFILE'
   exit 64
 fi
 : ${SIGNING_IDENTITY:?Set SIGNING_IDENTITY to your Developer ID Application identity.}
 : ${TEAM_ID:?Set TEAM_ID to your Apple Developer team ID.}
+: ${DEVELOPER_ID_PROFILE:?Set DEVELOPER_ID_PROFILE to the Developer ID profile with Production CloudKit access.}
+[[ -f "$DEVELOPER_ID_PROFILE" ]] || { print -u2 'Developer ID provisioning profile not found. See docs/releasing.md.'; exit 66; }
 notes=${1:A}
 notary_profile=$2
 [[ -s "$notes" ]] || { print -u2 'Release notes must be a nonempty file.'; exit 65; }
@@ -16,6 +18,44 @@ repository=zats/passtrami
 version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Info.plist)
 build_number=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' Info.plist)
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' Info.plist)
+profile_uuid=$(python3 - "$DEVELOPER_ID_PROFILE" "$TEAM_ID" "$bundle_id" <<'PY'
+from datetime import datetime, timezone
+from pathlib import Path
+import plistlib, shutil, subprocess, sys
+
+def require(condition, message):
+    if not condition:
+        raise SystemExit('Developer ID profile: ' + message)
+
+source = Path(sys.argv[1]).expanduser().resolve()
+decoded = subprocess.run(['/usr/bin/security', 'cms', '-D', '-i', str(source)], capture_output=True)
+require(decoded.returncode == 0, 'could not decode the file.')
+profile = plistlib.loads(decoded.stdout)
+entitlements = profile.get('Entitlements', {})
+require(sys.argv[2] in profile.get('TeamIdentifier', []), 'does not match TEAM_ID.')
+require(entitlements.get('com.apple.application-identifier') == sys.argv[2] + '.' + sys.argv[3],
+        'does not match the Mac app bundle identifier.')
+require(profile.get('ProvisionsAllDevices') is True and not entitlements.get('get-task-allow', False),
+        'must be a Developer ID distribution profile, not a development or App Store profile.')
+expiry = profile.get('ExpirationDate')
+require(expiry is not None and expiry.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc), 'has expired.')
+required = plistlib.loads(Path('Passtrami.entitlements').read_bytes())
+for key in ('com.apple.developer.icloud-container-identifiers', 'com.apple.developer.icloud-services'):
+    require(set(required[key]).issubset(entitlements.get(key, [])), 'does not include the required CloudKit capability or container.')
+environment = entitlements.get('com.apple.developer.icloud-container-environment')
+require(environment == 'Production' or isinstance(environment, list) and 'Production' in environment,
+        'does not allow Production CloudKit.')
+require(entitlements.get('com.apple.developer.aps-environment') == 'production',
+        'does not allow production push notifications.')
+identifier = profile.get('UUID')
+require(isinstance(identifier, str) and identifier, 'has no UUID.')
+destination = Path.home() / 'Library/Developer/Xcode/UserData/Provisioning Profiles' / (identifier + '.provisionprofile')
+destination.parent.mkdir(parents=True, exist_ok=True)
+if source != destination.resolve():
+    shutil.copyfile(source, destination)
+print(identifier)
+PY
+)
 feed_url=$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Info.plist)
 public_key=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Info.plist)
 [[ "$feed_url" == "https://zats.io/passtrami/appcast.xml" ]] || { print -u2 'Unexpected update feed URL.'; exit 65; }
@@ -27,24 +67,31 @@ tools=$(python3 scripts/sparkle-tools.py)
 [[ $("$tools/generate_keys" --account "$bundle_id" -p) == "$public_key" ]] || { print -u2 'Sparkle public key does not match the signing account.'; exit 65; }
 python3 scripts/prepare-extension.py
 Tests/Engine/run.sh
+Tests/Companion/run.sh
+Tests/PreferenceWindow/run.sh
 Tests/CLI/run.sh
 Tests/App/run.sh
 Tests/MCP/run.sh
 mkdir -p "$project_root/build/Distribution"
 work=$(mktemp -d "$project_root/build/Distribution/.prepare.XXXXXX")
 trap 'rm -rf "$work"' EXIT
+# Only app products need the profile; applying it to the command-line targets makes signing fail.
 xcodebuild -quiet -project Passtrami.xcodeproj -scheme Passtrami \
   -configuration Release -destination 'generic/platform=macOS' \
   -derivedDataPath "$project_root/build/Distribution/DerivedData" \
   -clonedSourcePackagesDirPath "$project_root/build/SourcePackages" \
   -archivePath "$work/Passtrami.xcarchive" \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
-  DEVELOPMENT_TEAM="$TEAM_ID" ENABLE_HARDENED_RUNTIME=YES archive
-python3 - "$work/export.plist" "$SIGNING_IDENTITY" "$TEAM_ID" <<'PY'
+  'PROVISIONING_PROFILE_SPECIFIER=$(PASSTRAMI_RELEASE_PROFILE_$(WRAPPER_EXTENSION))' \
+  PASSTRAMI_RELEASE_PROFILE_app="$profile_uuid" \
+  DEVELOPMENT_TEAM="$TEAM_ID" ICLOUD_CONTAINER_ENVIRONMENT=Production APS_ENVIRONMENT=production ENABLE_HARDENED_RUNTIME=YES archive
+python3 - "$work/export.plist" "$SIGNING_IDENTITY" "$TEAM_ID" "$bundle_id" "$profile_uuid" <<'PY'
 import plistlib, sys
 with open(sys.argv[1], 'wb') as output:
     plistlib.dump({'method': 'developer-id', 'signingStyle': 'manual',
-                  'signingCertificate': sys.argv[2], 'teamID': sys.argv[3]}, output)
+                  'signingCertificate': sys.argv[2], 'teamID': sys.argv[3],
+                  'provisioningProfiles': {sys.argv[4]: sys.argv[5]},
+                  'iCloudContainerEnvironment': 'Production'}, output)
 PY
 xcodebuild -quiet -exportArchive -archivePath "$work/Passtrami.xcarchive" \
   -exportPath "$work/export" -exportOptionsPlist "$work/export.plist"

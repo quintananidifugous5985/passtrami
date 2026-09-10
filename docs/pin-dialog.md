@@ -19,7 +19,7 @@ Inspected the native arm64e binaries on macOS 27 build 26A5425a in Hopper on 202
 | Icon top / bottom spacing | 8 pt / 16 pt |
 | Badge size / offset | 0.53 × main icon / (7, 0) pt |
 
-`coreautha`'s `-[LAAuthWindow initWithContentRect:styleMask:backing:defer:]` at `0x100001348` removes the resizable bit and adds `0x200008001`: titled, full-size content, and private style bit 33. It sets `titlebarAppearsTransparent`, `titlebarHidden`, and `titleVisibility`, makes the window nonopaque, and hides the window buttons. Passtrami uses this setup with a nonactivating panel. The system draws the rounded window surface.
+`coreautha`'s `-[LAAuthWindow initWithContentRect:styleMask:backing:defer:]` at `0x100001348` removes the resizable bit and adds `0x200008001`: titled, full-size content, and private style bit 33. It sets `titlebarAppearsTransparent`, `titlebarHidden`, and `titleVisibility`, makes the window nonopaque, and hides the window buttons. Passtrami uses this setup with an activating panel. It activates the app and focuses the PIN field when shown, then restores focus when app activation completes. The system draws the rounded window surface.
 
 ## Passtrami changes
 

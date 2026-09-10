@@ -7,12 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; };
+		2FA09820DBF6A972F4A46EAC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 10D404B2C37BC90BFDFE06AB /* Foundation.framework */; };
 		3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 6086BAF2C1AD43519A16AB5A /* MCP */; };
 		5369FAAF6A01C8682C47A10E /* PasstramiMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */; };
+		5B8D5D9CDD5269DAEAD29E01 /* PasstramiNotifications.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 56884C88709C165565549933 /* PasstramiNotifications.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7B0510CC02CDE69FF877464B /* PasstramiCLI in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = 7FE6811E743DE5CC922F8867 /* PasstramiCLI */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8349569D03C2C7D437824D2E /* PasstramiEngine in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = D019F1D8C6B2908C54113CCD /* PasstramiEngine */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C0441DB286B53455787986DC /* Bundle+DisplayName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74585DC261A8E755E41F14C1 /* Bundle+DisplayName.swift */; };
 		C3492C30EFC8EF7CFBC941BE /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = A1F139CC6E6255ACF70FAB05 /* MCP */; };
+		CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; };
 		E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802A56FBF9D7D8AF4A769C73 /* Harness.swift */; };
 /* End PBXBuildFile section */
 
@@ -31,6 +34,13 @@
 			remoteGlobalIDString = 5A2E607E04C4F8CFF16AA16B;
 			remoteInfo = PasstramiMCP;
 		};
+		F77D02873A2DB452781104B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 62FF5E90ECA31E89AA1AD56F;
+			remoteInfo = PasstramiNotifications;
+		};
 		FB331C7B4E78767CABE882CE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 803B8273E7560208A8C34C3C /* Project object */;
@@ -41,6 +51,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		25C5C7A560F0947B3F300595 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5B8D5D9CDD5269DAEAD29E01 /* PasstramiNotifications.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B4376111945C2EAC17D15D9A /* Embed Dependencies */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -68,7 +89,11 @@
 
 /* Begin PBXFileReference section */
 		029FA881CCD882486E5A92AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		10D404B2C37BC90BFDFE06AB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		56884C88709C165565549933 /* PasstramiNotifications.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PasstramiNotifications.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		74585DC261A8E755E41F14C1 /* Bundle+DisplayName.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "Bundle+DisplayName.swift"; path = "App/Bundle+DisplayName.swift"; sourceTree = "<group>"; };
+		7B49052207EC92AAFB9E1CAC /* PasstramiCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = PasstramiCompanion.app; path = Passtrami.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7FE6811E743DE5CC922F8867 /* PasstramiCLI */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiCLI; path = passtrami; sourceTree = BUILT_PRODUCTS_DIR; };
 		802A56FBF9D7D8AF4A769C73 /* Harness.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/MCP/Harness.swift; sourceTree = SOURCE_ROOT; };
 		B4710E9398C8906FECD1912E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -77,6 +102,39 @@
 		CDF5B95C40E49420E3973C0D /* Passtrami.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passtrami.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D019F1D8C6B2908C54113CCD /* PasstramiEngine */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiEngine; path = "passtrami-engine"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		139962C80D2D1C6869FAA581 /* Exceptions for "NotificationService" folder in "PasstramiNotifications" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 62FF5E90ECA31E89AA1AD56F /* PasstramiNotifications */;
+		};
+		433CBC7D26D4F06B78597164 /* Exceptions for "iPhone" folder in "PasstramiCompanion" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F9DCEBCBF7FC45221D31B231 /* PasstramiCompanion */;
+		};
+		58B97055BA000DAC81A7F023 /* Exceptions for "Companion" folder in "PasstramiCompanion" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				README.md,
+				schema.ckdb,
+			);
+			target = F9DCEBCBF7FC45221D31B231 /* PasstramiCompanion */;
+		};
+		EABBE4A08EDB8AE70DBF3015 /* Exceptions for "Companion" folder in "Passtrami" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				README.md,
+				schema.ckdb,
+			);
+			target = 54586CC0DD147B6213263959 /* Passtrami */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0B4FFC526A61A1A8D5846300 /* docs */ = {
@@ -128,6 +186,23 @@
 			path = CLI;
 			sourceTree = "<group>";
 		};
+		99649882CF13A02069F1C05F /* iPhone */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				433CBC7D26D4F06B78597164 /* Exceptions for "iPhone" folder in "PasstramiCompanion" target */,
+			);
+			path = iPhone;
+			sourceTree = "<group>";
+		};
+		9A6048F5D9831397F57D249A /* Companion */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EABBE4A08EDB8AE70DBF3015 /* Exceptions for "Companion" folder in "Passtrami" target */,
+				58B97055BA000DAC81A7F023 /* Exceptions for "Companion" folder in "PasstramiCompanion" target */,
+			);
+			path = Companion;
+			sourceTree = "<group>";
+		};
 		9D6EEFFECD5053C98768ED1D /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -163,17 +238,17 @@
 			path = Vendor;
 			sourceTree = "<group>";
 		};
+		E29F5B161CF2FB726C8EF902 /* NotificationService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				139962C80D2D1C6869FAA581 /* Exceptions for "NotificationService" folder in "PasstramiNotifications" target */,
+			);
+			path = NotificationService;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		CC0648779E7A4B5F901E21A5 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		3CD6C960F30D39895A354FB1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -190,9 +265,40 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C9ED2141BE219146280A45FF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2FA09820DBF6A972F4A46EAC /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC0648779E7A4B5F901E21A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E085AFB37151B55059F78B08 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		05FBCEE2544A7AF83A204BD5 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				10D404B2C37BC90BFDFE06AB /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		5CB8F1F13051BEA1005551C5 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
@@ -222,6 +328,10 @@
 				1CCAD66A4B668FEEB19D5AE6 /* MCP */,
 				E10641F8AE6469C143A69FAF /* Frameworks */,
 				5CB8F1F13051BEA1005551C5 /* Recovered References */,
+				9A6048F5D9831397F57D249A /* Companion */,
+				99649882CF13A02069F1C05F /* iPhone */,
+				74585DC261A8E755E41F14C1 /* Bundle+DisplayName.swift */,
+				E29F5B161CF2FB726C8EF902 /* NotificationService */,
 			);
 			sourceTree = "<group>";
 		};
@@ -233,6 +343,8 @@
 				D019F1D8C6B2908C54113CCD /* PasstramiEngine */,
 				C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */,
 				CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */,
+				7B49052207EC92AAFB9E1CAC /* PasstramiCompanion.app */,
+				56884C88709C165565549933 /* PasstramiNotifications.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -248,6 +360,7 @@
 			isa = PBXGroup;
 			children = (
 				D38897824FEBD2F9E1AC9EA7 /* OS X */,
+				05FBCEE2544A7AF83A204BD5 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -313,6 +426,7 @@
 				B4B66BDB5B12A787FB8BAFB3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				9A6048F5D9831397F57D249A /* Companion */,
 				9D6EEFFECD5053C98768ED1D /* App */,
 				A810734D4F22BD85D4808402 /* Assets */,
 			);
@@ -347,6 +461,26 @@
 			productReference = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */;
 			productType = "com.apple.product-type.tool";
 		};
+		62FF5E90ECA31E89AA1AD56F /* PasstramiNotifications */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1CE48B096E4CC79841415339 /* Build configuration list for PBXNativeTarget "PasstramiNotifications" */;
+			buildPhases = (
+				92B3EE2F41A83958BFAC8849 /* Sources */,
+				E085AFB37151B55059F78B08 /* Frameworks */,
+				F7DC3FB0F17EE9D2B32ED7FC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E29F5B161CF2FB726C8EF902 /* NotificationService */,
+			);
+			name = PasstramiNotifications;
+			productName = PasstramiNotifications;
+			productReference = 56884C88709C165565549933 /* PasstramiNotifications.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		8B9C5B52DA01348320BD7332 /* PasstramiMCPTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9281E99D4931AB8433313DB2 /* Build configuration list for PBXNativeTarget "PasstramiMCPTests" */;
@@ -370,6 +504,30 @@
 			productReference = CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */;
 			productType = "com.apple.product-type.tool";
 		};
+		F9DCEBCBF7FC45221D31B231 /* PasstramiCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 11FFD1996231265BC1D8BD31 /* Build configuration list for PBXNativeTarget "PasstramiCompanion" */;
+			buildPhases = (
+				FADE40ED0B05A78345C9E893 /* Sources */,
+				C9ED2141BE219146280A45FF /* Frameworks */,
+				B07F19D85430EE2E2CE1312F /* Resources */,
+				25C5C7A560F0947B3F300595 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				21FDC45E0FD2329B6C3CBB64 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				99649882CF13A02069F1C05F /* iPhone */,
+				9A6048F5D9831397F57D249A /* Companion */,
+				A810734D4F22BD85D4808402 /* Assets */,
+			);
+			name = PasstramiCompanion;
+			productName = PasstramiCompanion;
+			productReference = 7B49052207EC92AAFB9E1CAC /* PasstramiCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -386,7 +544,32 @@
 						ProvisioningStyle = Manual;
 					};
 					54586CC0DD147B6213263959 = {
-						ProvisioningStyle = Manual;
+						DevelopmentTeam = 5KE88HWMKJ;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
+					};
+					62FF5E90ECA31E89AA1AD56F = {
+						DevelopmentTeam = 5KE88HWMKJ;
+						ProvisioningStyle = Automatic;
+					};
+					F9DCEBCBF7FC45221D31B231 = {
+						DevelopmentTeam = 5KE88HWMKJ;
+						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.iCloud = {
+								enabled = 1;
+							};
+						};
 					};
 				};
 			};
@@ -413,6 +596,8 @@
 				1DCD1B28C505110E467CB2C2 /* PasstramiEngine */,
 				5A2E607E04C4F8CFF16AA16B /* PasstramiMCP */,
 				8B9C5B52DA01348320BD7332 /* PasstramiMCPTests */,
+				F9DCEBCBF7FC45221D31B231 /* PasstramiCompanion */,
+				62FF5E90ECA31E89AA1AD56F /* PasstramiNotifications */,
 			);
 		};
 /* End PBXProject section */
@@ -433,6 +618,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		97A36100E20F3FE71005C326 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B07F19D85430EE2E2CE1312F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F7DC3FB0F17EE9D2B32ED7FC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -486,6 +685,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		92B3EE2F41A83958BFAC8849 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9A8B46DF07327BB4D89A9918 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -500,9 +706,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FADE40ED0B05A78345C9E893 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0441DB286B53455787986DC /* Bundle+DisplayName.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		21FDC45E0FD2329B6C3CBB64 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PasstramiNotifications;
+			target = 62FF5E90ECA31E89AA1AD56F /* PasstramiNotifications */;
+			targetProxy = F77D02873A2DB452781104B1 /* PBXContainerItemProxy */;
+		};
 		5C6CA845D5ABE11BBEE085CF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1DCD1B28C505110E467CB2C2 /* PasstramiEngine */;
@@ -584,15 +804,54 @@
 			};
 			name = Debug;
 		};
-		6C7CF58F5D050E2EEA7FCB61 /* Debug */ = {
+		34EF7B0FF4A05D2924DFCEF9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = iPhone/Companion.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				ICLOUD_CONTAINER_ENVIRONMENT = Production;
+				INFOPLIST_FILE = iPhone/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.Companion;
+				PRODUCT_NAME = Passtrami;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		6C7CF58F5D050E2EEA7FCB61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = development;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Passtrami.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
+				ICLOUD_CONTAINER_ENVIRONMENT = Development;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -622,12 +881,18 @@
 		9B5D365EBA4FC9AFED908E51 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APS_ENVIRONMENT = development;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Passtrami.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
+				ICLOUD_CONTAINER_ENVIRONMENT = Production;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -817,6 +1082,99 @@
 			};
 			name = Debug;
 		};
+		D9999729F7731881F116BCC9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.Companion.Notifications;
+				PRODUCT_NAME = PasstramiNotifications;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E0044038B07A28E96E55D7EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = iPhone/Companion.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				ICLOUD_CONTAINER_ENVIRONMENT = Development;
+				INFOPLIST_FILE = iPhone/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.Companion;
+				PRODUCT_NAME = Passtrami;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F9873B6B4935C47B55BDF794 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5KE88HWMKJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.zats.Passtrami.Companion.Notifications;
+				PRODUCT_NAME = PasstramiNotifications;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -828,6 +1186,24 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
+		};
+		11FFD1996231265BC1D8BD31 /* Build configuration list for PBXNativeTarget "PasstramiCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				34EF7B0FF4A05D2924DFCEF9 /* Release */,
+				E0044038B07A28E96E55D7EA /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1CE48B096E4CC79841415339 /* Build configuration list for PBXNativeTarget "PasstramiNotifications" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9999729F7731881F116BCC9 /* Release */,
+				F9873B6B4935C47B55BDF794 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		2FE06CFD6280D726971C24B0 /* Build configuration list for PBXNativeTarget "PasstramiMCP" */ = {
 			isa = XCConfigurationList;
@@ -877,14 +1253,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = exactVersion;
-				version = 2.9.6;
-			};
-		};
 		55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk.git";
@@ -893,14 +1261,17 @@
 				version = 0.12.1;
 			};
 		};
+		CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.6;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		CC0648779E7A4B5F901E21A2 /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
 		6086BAF2C1AD43519A16AB5A /* MCP */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */;
@@ -910,6 +1281,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 55576CFB3517DEE1D3CBDB19 /* XCRemoteSwiftPackageReference "swift-sdk" */;
 			productName = MCP;
+		};
+		CC0648779E7A4B5F901E21A2 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC0648779E7A4B5F901E21A6 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

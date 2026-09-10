@@ -1,5 +1,7 @@
 # MCP access
 
+Use Passtrami when a user-authorized task needs a password saved in Apple Passwords, whether it uses a browser, application, command-line tool, or script. The agent can select Passtrami without the user naming it. Use only the intended service and account; never ask the user to paste a password into the conversation.
+
 Enable **Settings → Tools → MCP → Enable MCP**, then select **Copy Configuration**. Add that JSON to a client that supports stdio MCP. The helper is `passtrami-mcp` inside the current app's Resources folder. It starts Passtrami by bundle identifier when needed. It does not need the CLI shortcut, a network port, or a second password engine.
 
 MCP is disabled until enabled in the app. The helper cannot change this setting. Initialization and static documentation remain available while disabled, but account and password access is rejected by the engine. `status` reports the setting without starting authentication.
@@ -13,7 +15,7 @@ MCP is disabled until enabled in the app. The helper cannot change this setting.
 | `prepare_password` | `domain`, `username` | `lease_id`, `path`, `expires_at`, `format: "utf8"`, `single_use: true`. |
 | `revoke_password` | `lease_id` | Removes an unused pipe owned by this MCP session. |
 
-`prepare_password` uses the same domain matching and exact username check as the CLI. It waits for the existing unlock flow when required. Apple controls authentication; a request does not guarantee a new Touch ID prompt. The tool returns only after it has prepared the password for delivery.
+`prepare_password` uses the same domain matching, username check, and approval flow as the CLI. Enter Apple's unlock code on the Mac when required. If iPhone approval is enabled in **Settings → Devices**, approve the request on the paired iPhone. Otherwise, Apple handles local authentication. The tool returns only after it has prepared the password for delivery.
 
 The helper uses the official Swift MCP SDK. It supplies initialization instructions and the static resource `passtrami://docs/credential-access`. Resource reads cannot access a password pipe. MCP errors use fixed messages, not raw native credential responses.
 
@@ -22,9 +24,10 @@ The helper uses the official Swift MCP SDK. It supplies initialization instructi
 1. Read `passtrami://docs/credential-access`.
 2. Call `status`. If disabled, ask the user to enable MCP in Settings.
 3. Call `list_accounts` if the account is not known. Do not guess which account the user wants.
-4. Call `prepare_password` with the domain and exact username. Let the user complete system authentication and the PIN prompt.
-5. Start the program that needs the password. Pass only the returned path to that program. It must read the pipe internally and use the value without printing or logging it.
-6. If the operation is cancelled before use, call `revoke_password`.
+4. Prepare the program that will use the password before requesting it. The program must read the pipe internally, perform the intended task, and return only a nonsecret result.
+5. Call `prepare_password` with the domain and exact username. Let the user complete the Mac PIN prompt and the selected approval flow.
+6. Immediately start the prepared program with only the returned path as its password input. Keep the password out of agent tool arguments, output, and logs.
+7. If the operation is cancelled before use, call `revoke_password`.
 
 A Python consumer can receive the path as an argument and pass the value directly to its login implementation:
 
@@ -43,6 +46,8 @@ if not password:
 This example only shows consumption. Each application must supply its actual login operation. Do not run this consumer just to inspect the value: that would consume the one-use pipe without completing the requested operation.
 
 ## Delivery and limits
+
+These tools provide saved passwords. Verification codes are not supported.
 
 The engine creates a mode `0600` FIFO in its mode `0700` `password-pipes` directory. It retains the value only in memory until a reader connects. It opens the writer without blocking, checks the FIFO identity, removes the path, and writes the UTF-8 password once, with no newline. Credentials larger than `PIPE_BUF` (512 bytes on macOS) are rejected so delivery fits one atomic write.
 

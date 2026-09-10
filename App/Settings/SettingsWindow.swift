@@ -7,12 +7,17 @@ import SwiftUI
 final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private static let frameAutosaveName = "Passtrami.SettingsWindow"
     private let model: SettingsModel
+    private let companion: CompanionService
     private let didClose: () -> Void
 
     init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, browserRuntime: BrowserRuntimeModel,
+         companion: CompanionService,
          onMCPChange: @escaping (Bool) -> Void,
+         onDeviceApprovalChange: @escaping (Bool) -> Void,
          didClose: @escaping () -> Void) {
-        model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
+        model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange,
+                              onDeviceApprovalChange: onDeviceApprovalChange)
+        self.companion = companion
         self.didClose = didClose
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 520),
@@ -35,7 +40,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         super.init(window: window)
         window.delegate = self
         window.contentViewController = NSHostingController(rootView: SettingsView(
-            model: model, updates: updates, browserRuntime: browserRuntime,
+            model: model, updates: updates, browserRuntime: browserRuntime, companion: companion,
             onContentHeightChange: { [weak self] height in self?.fitContent(height: height) }
         ))
     }
@@ -45,11 +50,14 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 
     func present() {
         model.refresh()
+        Task { await companion.refresh() }
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         window?.orderFrontRegardless()
         NSApp.activate()
     }
+
+    func refreshDeviceApproval() { model.refreshDeviceApproval() }
 
     private func fitContent(height: CGFloat) {
         guard let window, let contentView = window.contentView else { return }
@@ -71,15 +79,25 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 @MainActor
 @Observable
 final class SettingsModel {
+    static let deviceApprovalPreferenceKey = "useIPhoneApproval"
     private let launchAtLogin: LaunchAtLoginController
     private let installer: CLIInstaller
     private let mcpSettings: MCPSettings
     private let onMCPChange: (Bool) -> Void
+    private let onDeviceApprovalChange: (Bool) -> Void
     private(set) var loginStatus: SMAppService.Status = .notRegistered
     private(set) var loginError: String?
     private(set) var cliInstalled = false
     private(set) var cliError: String?
     private(set) var mcpError: String?
+
+    var deviceApprovalEnabled: Bool {
+        didSet {
+            guard deviceApprovalEnabled != oldValue else { return }
+            UserDefaults.standard.set(deviceApprovalEnabled, forKey: Self.deviceApprovalPreferenceKey)
+            onDeviceApprovalChange(deviceApprovalEnabled)
+        }
+    }
 
     var mcpEnabled: Bool {
         didSet {
@@ -98,12 +116,15 @@ final class SettingsModel {
     }
 
     init(launchAtLogin: LaunchAtLoginController, installer: CLIInstaller = CLIInstaller(),
-         mcpSettings: MCPSettings = MCPSettings(), onMCPChange: @escaping (Bool) -> Void) {
+         mcpSettings: MCPSettings = MCPSettings(), onMCPChange: @escaping (Bool) -> Void,
+         onDeviceApprovalChange: @escaping (Bool) -> Void) {
         self.launchAtLogin = launchAtLogin
         self.installer = installer
         self.mcpSettings = mcpSettings
         self.onMCPChange = onMCPChange
+        self.onDeviceApprovalChange = onDeviceApprovalChange
         mcpEnabled = mcpSettings.isEnabled
+        deviceApprovalEnabled = UserDefaults.standard.object(forKey: Self.deviceApprovalPreferenceKey) as? Bool ?? true
     }
 
     func refresh() {
@@ -111,6 +132,11 @@ final class SettingsModel {
         loginStatus = launchAtLogin.status
         loginError = launchAtLogin.operationError
         cliInstalled = installer.isInstalled
+        refreshDeviceApproval()
+    }
+
+    func refreshDeviceApproval() {
+        deviceApprovalEnabled = UserDefaults.standard.object(forKey: Self.deviceApprovalPreferenceKey) as? Bool ?? true
     }
 
     func openLoginItems() { launchAtLogin.openLoginItems() }

@@ -10,6 +10,9 @@ struct EngineEvent: Decodable, Sendable {
     let state: EngineState?
     let message: String?
     var browserRuntime: BrowserRuntimeStatus? = nil
+    var id: String? = nil
+    var domain: String? = nil
+    var username: String? = nil
 }
 
 @MainActor
@@ -79,6 +82,12 @@ final class EngineProcess {
 
     func setMCPEnabled(_ enabled: Bool) {
         sendCommand(["op": "mcp", "enabled": enabled])
+    }
+
+    func finishDeviceApproval(id: String, remote: Bool = false, error: String? = nil) {
+        var command: [String: Any] = ["op": "deviceApprovalResult", "id": id, "remote": remote]
+        if let error { command["error"] = error }
+        sendCommand(command)
     }
 
     private func sendCommand(_ command: [String: Any]) {

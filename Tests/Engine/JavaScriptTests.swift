@@ -7,10 +7,13 @@ private final class ScriptFixture {
     var posts: [[String: Any]] = []
     var failed = false
 
-    init() throws {
+    init(automaticallyAuthorizesPasswords: Bool = true) throws {
         script = try SessionScript(directory: URL(fileURLWithPath: "Engine"), onPost: { [weak self] text in
             if let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] {
                 self?.posts.append(object)
+                if automaticallyAuthorizesPasswords, object["op"] as? String == "authorizePassword" {
+                    Task { [weak self] in self?.complete(object, result: ["remote": false]) }
+                }
             }
         }, onFailure: { [weak self] in self?.failed = true })
     }
@@ -38,9 +41,11 @@ private final class ScriptFixture {
             ["op": op, "domain": domain, "username": username]), as: UTF8.self)
         event(["type": "request", "connection": id, "text": text])
     }
-    func complete(_ operation: [String: Any], error: String? = nil) {
+    func complete(_ operation: [String: Any], error: String? = nil,
+                  code: String = "browser_start", result: [String: Any]? = nil) {
         var event: [String: Any] = ["type": "nativeResult", "id": operation["id"]!]
-        if let error { event["error"] = ["code": "browser_start", "message": error] }
+        if let error { event["error"] = ["code": code, "message": error] }
+        if let result { event["result"] = result }
         self.event(event)
     }
     func take(_ op: String, connection: String? = nil) async throws -> [String: Any] {
@@ -209,7 +214,7 @@ func runJavaScriptTests() async throws {
         try f.request("request")
         let request = try await f.sent("bridge")
         if cause == "timeout" {
-            let timer = f.posts.first { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+            let timer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
             f.event(["type": "timer", "id": timer["id"]!])
         } else if cause == "locked" { try f.nativeReply("bridge", request: request, status: 9) }
         else if cause == "relogin" {
@@ -314,5 +319,326 @@ func runJavaScriptTests() async throws {
         f.complete(try await f.take("stopBrowser"))
         _ = try await f.take("shutdown")
     }
-    print("JavaScriptCore: 14 credential/bridge tests and session lifecycle checks passed")
+    try await runPasswordAuthorizationTests()
+    print("JavaScriptCore: 14 credential/bridge tests, session lifecycle, and password approval checks passed")
+}
+
+@MainActor
+private func runPasswordAuthorizationTests() async throws {
+    // Both the app approval and native access window must finish before the get is sent.
+    do {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("approved", domain: "https://EXAMPLE.test/login")
+        let approval = try await f.take("authorizePassword")
+        let approvalTimer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+        try engineExpect(approval["domain"] as? String == "example.test" && approval["username"] as? String == "person",
+                         "Approval did not receive the normalized account")
+        try engineExpect(!f.posts.contains { ["send", "beginPasswordAccess"].contains($0["op"] as? String ?? "") },
+                         "A password query started before approval")
+
+        f.complete(approval, result: ["remote": true])
+        let begin = try await f.take("beginPasswordAccess")
+        try engineExpect(f.posts.contains {
+            $0["op"] as? String == "cancelTimer" && $0["id"] as? String == approvalTimer["id"] as? String
+        }, "Approval completion did not cancel its timer")
+        f.event(["type": "timer", "id": approvalTimer["id"]!])
+        let accessID = begin["accessID"] as! String
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "send" }, "A query started before access was ready")
+        f.complete(begin)
+        let request = try await f.sent("bridge")
+        try engineExpect(request["cmd"] as? Int == 5, "An approved get used the wrong native command")
+        try f.nativeReply("bridge", request: request)
+        let end = try await f.take("endPasswordAccess")
+        try engineExpect(end["accessID"] as? String == accessID, "Success restored a different access window")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "reply" && $0["connection"] as? String == "approved" },
+                         "The password was returned before access restoration")
+        f.complete(end)
+        try engineExpect(try await f.response("approved")["password"] as? String == "fixture-only", "Approved get failed")
+    }
+
+    // Denied approval must leave both the preference window and browser query untouched.
+    do {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("denied")
+        let approval = try await f.take("authorizePassword")
+        f.complete(approval, error: "Fixture denial", code: "device_approval")
+        try engineExpect(try await f.response("denied")["code"] as? String == "device_approval", "Approval denial was lost")
+        try engineExpect(!f.posts.contains {
+            ["send", "beginPasswordAccess", "endPasswordAccess", "stopBrowser"].contains($0["op"] as? String ?? "")
+        }, "Denied approval touched the password session")
+    }
+
+    // Closing a client cancels its app approval; a late success must not send that get.
+    do {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("cancelled-approval")
+        let approval = try await f.take("authorizePassword")
+        let approvalTimer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+        f.event(["type": "clientClosed", "connection": "cancelled-approval"])
+        let cancellation = try await f.take("cancelAuthorization")
+        try engineExpect(cancellation["id"] as? String == approval["id"] as? String, "Cancelled the wrong app approval")
+        try engineExpect(f.posts.contains {
+            $0["op"] as? String == "cancelTimer" && $0["id"] as? String == approvalTimer["id"] as? String
+        }, "Approval cancellation did not cancel its timer")
+        f.complete(approval, result: ["remote": true])
+        try f.request("list-after-cancel", op: "list")
+        let request = try await f.sent("bridge")
+        try engineExpect(request["cmd"] as? Int == 4, "A cancelled approval sent a late password get")
+        try f.nativeReply("bridge", request: request)
+        _ = try await f.response("list-after-cancel")
+        try engineExpect(!f.posts.contains {
+            $0["op"] as? String == "beginPasswordAccess" ||
+            ($0["op"] as? String == "reply" && $0["connection"] as? String == "cancelled-approval")
+        }, "Cancelled approval changed access or replied to the closed client")
+    }
+
+    // An app that does not answer cannot hold the request queue indefinitely.
+    do {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("approval-timeout")
+        let approval = try await f.take("authorizePassword")
+        let timer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+        f.event(["type": "timer", "id": timer["id"]!])
+        let cancellation = try await f.take("cancelAuthorization")
+        try engineExpect(cancellation["id"] as? String == approval["id"] as? String, "Timeout cancelled the wrong approval")
+        try engineExpect(try await f.response("approval-timeout")["code"] as? String == "timeout", "Approval timeout was not returned")
+        try engineExpect(!f.posts.contains {
+            ["send", "beginPasswordAccess", "endPasswordAccess", "stopBrowser"].contains($0["op"] as? String ?? "")
+        }, "Approval timeout touched the password session")
+
+        f.complete(approval, result: ["remote": true])
+        f.event(["type": "timer", "id": timer["id"]!])
+        try f.request("after-approval-timeout", op: "list")
+        let request = try await f.sent("bridge")
+        try engineExpect(request["cmd"] as? Int == 4, "An expired approval sent a late password get")
+        try f.nativeReply("bridge", request: request)
+        _ = try await f.response("after-approval-timeout")
+        try engineExpect(!f.posts.contains {
+            ["beginPasswordAccess", "cancelAuthorization"].contains($0["op"] as? String ?? "") ||
+            ($0["op"] as? String == "reply" && $0["connection"] as? String == "approval-timeout")
+        }, "An expired approval was completed twice")
+    }
+
+    // Browser loss cancels the app approval before a queued request can start a new session.
+    for cause in ["bridgeClosed", "browserExited"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("interrupted-approval")
+        let approval = try await f.take("authorizePassword")
+        let timer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+        try f.request("after-browser-stop")
+        if cause == "bridgeClosed" {
+            f.event(["type": cause, "connection": "bridge"])
+        } else {
+            f.event(["type": cause, "token": token])
+        }
+        let cancellation = try await f.take("cancelAuthorization")
+        try engineExpect(cancellation["id"] as? String == approval["id"] as? String, "Browser loss cancelled the wrong approval")
+        try engineExpect(f.posts.contains {
+            $0["op"] as? String == "cancelTimer" && $0["id"] as? String == timer["id"] as? String
+        }, "Browser loss left the approval timer active")
+        let stop = try await f.take("stopBrowser")
+        try engineExpect(try await f.response("interrupted-approval")["code"] as? String == "locked", "Browser loss left approval pending")
+        f.complete(approval, result: ["remote": true])
+        _ = try await f.status()
+        try engineExpect(!f.posts.contains {
+            ["send", "beginPasswordAccess", "authorizePassword", "startBrowser"].contains($0["op"] as? String ?? "")
+        }, "A queued request used the browser while it was stopping")
+
+        f.complete(stop)
+        let start = try await f.take("startBrowser")
+        f.complete(start)
+        try f.connect("new", token: start["token"] as! String, state: "SessionKeySet")
+        let nextApproval = try await f.take("authorizePassword")
+        try engineExpect(nextApproval["id"] as? String != approval["id"] as? String, "The next request reused its cancelled approval")
+        f.complete(nextApproval, result: ["remote": false])
+        let request = try await f.sent("new")
+        try f.nativeReply("new", request: request)
+        _ = try await f.response("after-browser-stop")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "beginPasswordAccess" },
+                         "A late remote approval changed the next request")
+    }
+
+    // Apple can end its session while the browser remains open and phone approval is pending.
+    for state in ["CheckEngine", "NotInSession"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("native-session-ended")
+        let approval = try await f.take("authorizePassword")
+        let timer = f.posts.last { $0["op"] as? String == "timer" && $0["milliseconds"] as? Int == 120000 }!
+        try f.state("bridge", state)
+        let cancellation = try await f.take("cancelAuthorization")
+        try engineExpect(cancellation["id"] as? String == approval["id"] as? String, "Native session loss cancelled the wrong approval")
+        try engineExpect(f.posts.contains {
+            $0["op"] as? String == "cancelTimer" && $0["id"] as? String == timer["id"] as? String
+        }, "Native session loss left the approval timer active")
+        let response = try await f.response("native-session-ended")
+        try engineExpect(response["code"] as? String == "locked" && response["password"] == nil,
+                         "Native session loss left phone approval pending")
+
+        try f.state("bridge", "SessionKeySet")
+        f.complete(approval, result: ["remote": true])
+        _ = try await f.status()
+        try engineExpect(!f.posts.contains {
+            ["send", "beginPasswordAccess", "authorizePassword", "startBrowser"].contains($0["op"] as? String ?? "") ||
+            ($0["op"] as? String == "reply" && $0["connection"] as? String == "native-session-ended")
+        }, "A stale approval started a request after native session loss")
+    }
+
+    // A native failure still restores access; failed restoration must not return the password.
+    for failure in ["native", "restore"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("failure")
+        f.complete(try await f.take("authorizePassword"), result: ["remote": true])
+        let begin = try await f.take("beginPasswordAccess")
+        f.complete(begin)
+        let request = try await f.sent("bridge")
+        if failure == "native" {
+            try f.message("bridge", ["id": request["id"]!, "status": 1])
+        } else {
+            try f.nativeReply("bridge", request: request)
+        }
+        let end = try await f.take("endPasswordAccess")
+        try engineExpect(end["accessID"] as? String == begin["accessID"] as? String,
+                         "Failure restored a different access window")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "stopBrowser" },
+                         "The failure abandoned restoration before stopping")
+        if failure == "restore" {
+            f.complete(end, error: "Fixture restoration failure", code: "password_access")
+        } else {
+            f.complete(end)
+        }
+        f.complete(try await f.take("stopBrowser"))
+        let response = try await f.response("failure")
+        let expected = failure == "native" ? "native_error" : "password_access"
+        try engineExpect(response["code"] as? String == expected && response["password"] == nil,
+                         "A failed password request returned success or lost its error")
+    }
+
+    // Session loss or cancellation during restoration must discard a password already received from Apple.
+    for interruption in ["lock", "cancelled", "CheckEngine", "NotInSession"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("interrupted-restoration")
+        f.complete(try await f.take("authorizePassword"), result: ["remote": true])
+        f.complete(try await f.take("beginPasswordAccess"))
+        let request = try await f.sent("bridge")
+        try f.nativeReply("bridge", request: request)
+        let end = try await f.take("endPasswordAccess")
+        if interruption == "lock" {
+            f.command("lock")
+            f.complete(try await f.take("stopBrowser"))
+        } else if interruption == "cancelled" {
+            f.event(["type": "clientClosed", "connection": "interrupted-restoration"])
+        } else {
+            try f.state("bridge", interruption)
+            try f.state("bridge", "SessionKeySet")
+        }
+        try engineExpect(!f.posts.contains {
+            $0["op"] as? String == "reply" && $0["connection"] as? String == "interrupted-restoration"
+        }, "Interrupted restoration returned a password before it finished")
+        f.complete(end)
+        if interruption != "cancelled" {
+            let response = try await f.response("interrupted-restoration")
+            try engineExpect(response["code"] as? String == "locked" && response["password"] == nil,
+                             "Session loss during restoration still returned the password")
+        } else {
+            _ = try await f.status()
+            try engineExpect(!f.posts.contains {
+                $0["op"] as? String == "reply" && $0["connection"] as? String == "interrupted-restoration"
+            }, "Cancelled restoration replied to the closed client")
+        }
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" || $0["op"] as? String == "authorizePassword" },
+                         "Interrupted restoration retried the password request")
+    }
+
+    // Expiry or cancellation while native access starts must still restore without sending a get.
+    for interruption in ["expired", "cancelled"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("interrupted-begin")
+        f.complete(try await f.take("authorizePassword"), result: ["remote": true])
+        let begin = try await f.take("beginPasswordAccess")
+        if interruption == "expired" {
+            f.event(["type": "passwordAccessExpired", "accessID": begin["accessID"]!])
+        } else {
+            f.event(["type": "clientClosed", "connection": "interrupted-begin"])
+        }
+        f.complete(begin)
+        let end = try await f.take("endPasswordAccess")
+        try engineExpect(end["accessID"] as? String == begin["accessID"] as? String,
+                         "Interrupted startup restored a different access window")
+        try engineExpect(!f.posts.contains { $0["op"] as? String == "send" },
+                         "Interrupted access startup sent a password query")
+        f.complete(end)
+        f.complete(try await f.take("stopBrowser"))
+        if interruption == "expired" {
+            try engineExpect(try await f.response("interrupted-begin")["code"] as? String == "timeout",
+                             "Expiry during startup did not reject the request")
+        } else {
+            _ = try await f.status()
+            try engineExpect(!f.posts.contains {
+                $0["op"] as? String == "reply" && $0["connection"] as? String == "interrupted-begin"
+            }, "Cancelled access startup replied to the closed client")
+        }
+    }
+
+    // Expiry is tied to one access ID. A late expiry cannot reject a later account request.
+    do {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("old", token: token, state: "SessionKeySet")
+        try f.request("expired")
+        f.complete(try await f.take("authorizePassword"), result: ["remote": true])
+        let firstBegin = try await f.take("beginPasswordAccess")
+        let firstID = firstBegin["accessID"] as! String
+        f.complete(firstBegin)
+        _ = try await f.sent("old")
+        try f.request("after-expiry")
+        f.event(["type": "passwordAccessExpired", "accessID": "unrelated-access"])
+        _ = try await f.status()
+        try engineExpect(!f.posts.contains { ["endPasswordAccess", "stopBrowser"].contains($0["op"] as? String ?? "") },
+                         "An unrelated expiry cancelled the active request")
+
+        f.event(["type": "passwordAccessExpired", "accessID": firstID])
+        let firstEnd = try await f.take("endPasswordAccess")
+        try engineExpect(firstEnd["accessID"] as? String == firstID, "Expiry restored the wrong access window")
+        f.complete(firstEnd)
+        f.complete(try await f.take("stopBrowser"))
+        try engineExpect(try await f.response("expired")["code"] as? String == "timeout", "Expiry did not reject its own query")
+
+        let start = try await f.take("startBrowser")
+        f.complete(start)
+        try f.connect("new", token: start["token"] as! String, state: "SessionKeySet")
+        f.complete(try await f.take("authorizePassword"), result: ["remote": true])
+        let secondBegin = try await f.take("beginPasswordAccess")
+        let secondID = secondBegin["accessID"] as! String
+        try engineExpect(secondID != firstID, "The next request reused the expired access ID")
+        f.complete(secondBegin)
+        let second = try await f.sent("new")
+        f.event(["type": "passwordAccessExpired", "accessID": firstID])
+        _ = try await f.status()
+        try engineExpect(!f.posts.contains { ["endPasswordAccess", "stopBrowser"].contains($0["op"] as? String ?? "") },
+                         "An old expiry cancelled the next request")
+        try f.nativeReply("new", request: second)
+        let secondEnd = try await f.take("endPasswordAccess")
+        try engineExpect(secondEnd["accessID"] as? String == secondID, "The next request restored the wrong access window")
+        f.complete(secondEnd)
+        try engineExpect(try await f.response("after-expiry")["password"] as? String == "fixture-only",
+                         "The next request did not survive a stale expiry")
+    }
 }

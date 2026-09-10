@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 
 let arguments = Array(CommandLine.arguments.dropFirst())
+if let status = TouchIDPreferenceWindow.runGuardIfRequested(arguments) { exit(status) }
 guard arguments.count == 4, arguments[0] == "--resources", arguments[2] == "--data-dir" else {
     FileHandle.standardError.write(Data("Usage: passtrami-engine --resources <path> --data-dir <path>\n".utf8))
     exit(64)

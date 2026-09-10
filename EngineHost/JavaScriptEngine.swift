@@ -18,6 +18,11 @@ final class JavaScriptEngine {
     private var signals: [DispatchSourceSignal] = []
     private var input = Data()
     private var stopping = false
+    private var instanceLock: EngineInstanceLock?
+    private var authorizations = Set<String>()
+    private lazy var passwordAccess = TouchIDPreferenceWindow(directory: dataDirectory) { [weak self] accessID in
+        Task { @MainActor in self?.deliver(["type": "passwordAccessExpired", "accessID": accessID]) }
+    }
 
     init(resources: URL, dataDirectory: URL) {
         self.resources = resources
@@ -28,6 +33,8 @@ final class JavaScriptEngine {
         try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectory.path)
+        instanceLock = try EngineInstanceLock(directory: dataDirectory)
+        try await passwordAccess.recover()
         let pipes = try PasswordPipes(directory: dataDirectory.appendingPathComponent("password-pipes"))
         mcp = MCPBroker(pipes: pipes, forward: { [weak self] id, text in
             self?.deliver(["type": "request", "connection": id, "text": text])
@@ -90,6 +97,36 @@ final class JavaScriptEngine {
         let id = message["id"] as? String ?? ""
         let connection = message["connection"] as? String ?? ""
         switch operation {
+        case "authorizePassword":
+            guard let domain = message["domain"] as? String, let username = message["username"] as? String else { return }
+            authorizations.insert(id)
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    // A failed restore must also block later requests that use local approval.
+                    try await passwordAccess.recover()
+                    guard !stopping, authorizations.contains(id) else { return }
+                    emit(["type": "deviceApprovalRequired", "id": id, "domain": domain, "username": username])
+                } catch {
+                    guard authorizations.remove(id) != nil else { return }
+                    complete(id, error: EngineFailure("password_access", "Could not restore the password approval setting."))
+                }
+            }
+        case "cancelAuthorization":
+            authorizations.remove(id)
+            emit(["type": "deviceApprovalCancelled", "id": id])
+        case "beginPasswordAccess", "endPasswordAccess":
+            guard let accessID = message["accessID"] as? String else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    if operation == "beginPasswordAccess" { try await passwordAccess.begin(accessID) }
+                    else { try await passwordAccess.end(accessID) }
+                    complete(id)
+                } catch {
+                    complete(id, error: EngineFailure("password_access", "Could not restore or change the password approval setting."))
+                }
+            }
         case "emit":
             if let event = message["event"] as? [String: Any] { emit(event) }
         case "timer":
@@ -150,9 +187,10 @@ final class JavaScriptEngine {
         }
     }
 
-    private func complete(_ id: String, error: EngineFailure? = nil) {
+    private func complete(_ id: String, error: EngineFailure? = nil, result: [String: Any]? = nil) {
         var event: [String: Any] = ["type": "nativeResult", "id": id]
         if let error { event["error"] = ["code": error.code, "message": error.message] }
+        if let result { event["result"] = result }
         deliver(event)
     }
 
@@ -177,11 +215,27 @@ final class JavaScriptEngine {
     }
 
     private func command(_ value: [String: Any]) {
+        if value["op"] as? String == "deviceApprovalResult" {
+            guard let id = value["id"] as? String, authorizations.remove(id) != nil else { return }
+            if let message = value["error"] as? String {
+                complete(id, error: EngineFailure("device_approval", message))
+            } else {
+                complete(id, result: ["remote": value["remote"] as? Bool == true])
+            }
+            return
+        }
         if value["op"] as? String == "mcp" {
             if let enabled = value["enabled"] as? Bool { mcp?.setEnabled(enabled) }
             return
         }
-        if ["lock", "shutdown"].contains(value["op"] as? String ?? "") { mcp?.invalidate() }
+        if ["lock", "shutdown"].contains(value["op"] as? String ?? "") {
+            mcp?.invalidate()
+            for id in authorizations {
+                emit(["type": "deviceApprovalCancelled", "id": id])
+                complete(id, error: EngineFailure("cancelled", "Request cancelled."))
+            }
+            authorizations.removeAll()
+        }
         deliver(["type": "command", "command": value])
     }
 
@@ -216,6 +270,7 @@ final class JavaScriptEngine {
         guard !stopping else { return }
         mcp?.invalidate()
         stopping = true
+        try? await passwordAccess.recover()
         FileHandle.standardInput.readabilityHandler = nil
         for task in timers.values { task.cancel() }
         timers.removeAll()
