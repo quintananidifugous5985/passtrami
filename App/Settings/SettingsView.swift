@@ -31,6 +31,7 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle(Text(selectedPane.title))
         }
         .navigationSplitViewStyle(.balanced)
         .frame(
@@ -121,22 +122,17 @@ private struct CommandLineSettingsSection: View {
     var body: some View {
         Section {
             HStack(alignment: .center, spacing: 16) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(spacing: 4) {
                     Text("passtrami")
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("~/.local/bin/passtrami")
-                            .font(.body.monospaced())
-                            .textSelection(.enabled)
-                        if model.cliInstalled {
-                            Button("Reveal in Finder", systemImage: "arrow.up.right.square.fill", action: model.revealCLI)
-                                .labelStyle(.iconOnly)
-                                .buttonStyle(.plain)
-                                .controlSize(.mini)
-                                .font(.caption)
-                                .help("Reveal in Finder")
-                        }
+                    if model.cliInstalled {
+                        Button("Reveal in Finder", systemImage: "arrow.up.right.square.fill", action: model.revealCLI)
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.plain)
+                            .controlSize(.mini)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .help("Reveal in Finder")
                     }
-                    .foregroundStyle(.secondary)
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 16)
@@ -151,10 +147,11 @@ private struct CommandLineSettingsSection: View {
         } header: {
             Text("Command Line")
         } footer: {
-            if let error = model.cliError {
-                Text(error)
-            } else if model.didInstallCLI {
-                Text("Open a new terminal to use passtrami.")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Run `passtrami --help` from a terminal window to learn more.")
+                if let error = model.cliError {
+                    Text(error)
+                }
             }
         }
     }
@@ -165,21 +162,14 @@ private struct MCPSettingsSection: View {
 
     var body: some View {
         Section {
-            VStack(spacing: 0) {
-                Toggle("Enable MCP", isOn: $model.mcpEnabled)
-                    .toggleStyle(.switch)
-                if model.mcpEnabled {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Divider()
-                        LabeledContent("Server Configuration") {
-                            Button("Copy Configuration", action: model.copyMCPConfiguration)
-                                .fixedSize()
-                        }
-                        .frame(minHeight: 44)
-                    }
-                    .padding(.top, 10)
-                    .transition(.opacity)
+            Toggle("Enable MCP", isOn: $model.mcpEnabled)
+                .toggleStyle(.switch)
+            if model.mcpEnabled {
+                LabeledContent("Server Configuration") {
+                    Button("Copy Configuration", action: model.copyMCPConfiguration)
+                        .fixedSize()
                 }
+                .transition(.opacity)
             }
         } header: {
             Text("MCP")
@@ -196,7 +186,7 @@ private struct MCPSettingsSection: View {
 
 private struct AboutSettingsSection: View {
     var body: some View {
-        Section("About") {
+        Section {
             LabeledContent("Version", value: Bundle.main.displayVersion)
             LabeledContent("GitHub") {
                 Link("zats/passtrami", destination: URL(string: "https://github.com/zats/passtrami")!)

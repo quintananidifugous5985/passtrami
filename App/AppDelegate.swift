@@ -32,6 +32,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         pinWindow.onSubmit = { [weak self] pin in self?.engine.send("pin", pin: pin) }
         pinWindow.onCancel = { [weak self] in self?.lock() }
+        if !UserDefaults.standard.bool(forKey: "didShowInitialSettings") {
+            UserDefaults.standard.set(SettingsPane.general.rawValue, forKey: "settingsPane")
+            showSettings()
+            UserDefaults.standard.set(true, forKey: "didShowInitialSettings")
+        }
         startEngine()
     }
 

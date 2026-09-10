@@ -24,8 +24,11 @@ struct ComponentsSettingsSection: View {
         } header: {
             Text("Components")
         } footer: {
-            if model.status.phase == .failed, let message = model.status.message {
-                Text(message)
+            VStack(alignment: .leading, spacing: 6) {
+                if model.status.phase == .failed, let message = model.status.message {
+                    Text(message)
+                }
+                Text("\(Bundle.main.displayName) uses the Chromium runtime to connect securely to Apple Passwords, just like Apple’s iCloud Passwords extension.")
             }
         }
     }

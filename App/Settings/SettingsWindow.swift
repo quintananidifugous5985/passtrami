@@ -21,7 +21,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
             defer: false
         )
         window.title = "\(Bundle.main.displayName) Settings"
-        window.titleVisibility = .hidden
+        window.titleVisibility = .visible
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
         window.backgroundColor = .clear
@@ -78,7 +78,6 @@ final class SettingsModel {
     private(set) var loginError: String?
     private(set) var cliInstalled = false
     private(set) var cliError: String?
-    private(set) var didInstallCLI = false
     private(set) var mcpError: String?
 
     var mcpEnabled: Bool {
@@ -144,7 +143,6 @@ final class SettingsModel {
         cliError = nil
         do {
             try installer.install()
-            didInstallCLI = true
             refresh()
         } catch {
             cliError = error.localizedDescription
@@ -155,7 +153,6 @@ final class SettingsModel {
         cliError = nil
         do {
             try installer.uninstall()
-            didInstallCLI = false
             refresh()
         } catch {
             cliError = error.localizedDescription
