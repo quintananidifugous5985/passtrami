@@ -104,6 +104,7 @@ func runJavaScriptTests() async throws {
         try engineExpect(!fixture.failed, "JavaScript unit fixture failed")
     }
     try engineExpect(unitCount == 14, "Some JavaScript unit tests did not run")
+    try await runPolicyCancellationTests()
 
     // Native URL normalization is part of the credential trust boundary.
     for invalid in ["", "https://a:b@example.test", "https://a@example.test", "file:///example.test", "not a domain", "https://", "https://example.test%2fevil.test"] {
@@ -236,34 +237,45 @@ func runJavaScriptTests() async throws {
         }
     }
 
-    // A failed native helper must release the browser before Unlock or a CLI request retries.
-    for op in ["unlock", "get", "list"] {
-        let f = try ScriptFixture(), token = try await f.start()
-        try f.connect("old", token: token, state: "SessionKeySet")
-        try f.state("old", "NativeSupportNotInstalled")
-        try engineExpect(try await f.status()["state"] as? String == "error", "Native helper failure did not reach the UI state")
-        let stop = try await f.take("stopBrowser")
-        if op == "unlock" { f.command("unlock") }
-        else { try f.request("retry", op: op) }
-        try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Recovery started before the old browser stopped")
-        f.complete(stop)
-        let start = try await f.take("startBrowser")
-        try engineExpect(start["token"] as? String != token, "Helper recovery reused the failed session")
-        f.complete(start)
-        try f.state("old", "SessionKeySet")
-        try engineExpect(try await f.status()["state"] as? String != "unlocked", "The failed helper restored an old session")
-        try f.connect("new", token: start["token"] as! String)
-        try engineExpect(try await f.sent("new")["op"] as? String == "unlock", "Helper recovery did not request pairing")
-        try f.state("new", "MSG1Set")
-        try engineExpect(f.posts.contains {
-            $0["op"] as? String == "emit" && ($0["event"] as? [String: Any])?["type"] as? String == "pinRequired"
-        }, "Helper recovery did not request the PIN window")
-        try f.state("new", "SessionKeySet")
-        if op != "unlock" {
+    // Helper and approval recovery failures must release the browser before an app or CLI retry.
+    for cause in ["helper", "approvalRecovery"] {
+        for op in ["unlock", "get", "list"] {
+            let f = try ScriptFixture(), token = try await f.start()
+            try f.connect("old", token: token, state: "SessionKeySet")
+            if cause == "helper" { try f.state("old", "NativeSupportNotInstalled") }
+            else {
+                f.event(["type": "approvalRecoveryFailed", "message": "Fixture approval recovery failed."])
+            }
+            try engineExpect(try await f.status()["state"] as? String == "error", "Session failure did not reach the error state")
+            let stop = try await f.take("stopBrowser")
+            if op == "unlock" { f.command("unlock") }
+            else { try f.request("retry", op: op) }
+            try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" }, "Recovery started before the old browser stopped")
+            f.complete(stop)
+            let start = try await f.take("startBrowser")
+            try engineExpect(start["token"] as? String != token, "Recovery reused the failed session")
+            f.complete(start)
+            try f.state("old", "SessionKeySet")
+            try engineExpect(try await f.status()["state"] as? String != "unlocked", "The failed helper restored an old session")
+            try f.connect("new", token: start["token"] as! String)
+            try engineExpect(try await f.sent("new")["op"] as? String == "unlock", "Recovery did not request pairing")
+            try f.state("new", "MSG1Set")
+            try engineExpect(f.posts.contains {
+                $0["op"] as? String == "emit" && ($0["event"] as? [String: Any])?["type"] as? String == "pinRequired"
+            }, "Recovery did not request the PIN window")
+            f.command("pin", pin: "123456")
+            let pin = try await f.sent("new")
+            try engineExpect(pin["op"] as? String == "pin" && pin["pin"] as? String == "123456", "Recovery did not submit the PIN")
+            try f.state("new", "SessionKeySet")
+            if op == "unlock" { try f.request("retry") }
             try f.nativeReply("new", request: await f.sent("new"))
-            try engineExpect(try await f.response("retry")["ok"] as? Bool == true, "CLI request did not resume after helper recovery")
+            let response = try await f.response("retry")
+            try engineExpect(response["ok"] as? Bool == true, "CLI request did not resume after recovery")
+            if op != "list" {
+                try engineExpect(response["password"] as? String == "fixture-only", "Recovery did not return the fixture password")
+            }
+            try engineExpect(try await f.status()["state"] as? String == "unlocked", "Recovery did not update the UI state")
         }
-        try engineExpect(try await f.status()["state"] as? String == "unlocked", "Helper recovery did not update the UI state")
     }
 
     // The final invalid-session reply must clear both CLI status and the menu state.
@@ -528,7 +540,7 @@ private func runPasswordAuthorizationTests() async throws {
     }
 
     // Session loss or cancellation during restoration must discard a password already received from Apple.
-    for interruption in ["lock", "cancelled", "CheckEngine", "NotInSession"] {
+    for interruption in ["lock", "cancelled", "CheckEngine", "NotInSession", "policy"] {
         let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
         let token = try await f.start()
         try f.connect("bridge", token: token, state: "SessionKeySet")
@@ -543,6 +555,8 @@ private func runPasswordAuthorizationTests() async throws {
             f.complete(try await f.take("stopBrowser"))
         } else if interruption == "cancelled" {
             f.event(["type": "clientClosed", "connection": "interrupted-restoration"])
+        } else if interruption == "policy" {
+            f.event(["type": "approvalPolicyChanged"])
         } else {
             try f.state("bridge", interruption)
             try f.state("bridge", "SessionKeySet")
@@ -553,7 +567,8 @@ private func runPasswordAuthorizationTests() async throws {
         f.complete(end)
         if interruption != "cancelled" {
             let response = try await f.response("interrupted-restoration")
-            try engineExpect(response["code"] as? String == "locked" && response["password"] == nil,
+            let expectedCode = interruption == "policy" ? "cancelled" : "locked"
+            try engineExpect(response["code"] as? String == expectedCode && response["password"] == nil,
                              "Session loss during restoration still returned the password")
         } else {
             _ = try await f.status()
@@ -563,6 +578,33 @@ private func runPasswordAuthorizationTests() async throws {
         }
         try engineExpect(!f.posts.contains { $0["op"] as? String == "startBrowser" || $0["op"] as? String == "authorizePassword" },
                          "Interrupted restoration retried the password request")
+    }
+
+    // A changed approval requirement cancels both waiting approval and an
+    // already-sent local query; late approvals and replies cannot release a value.
+    for phase in ["approval", "query"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        try f.connect("bridge", token: token, state: "SessionKeySet")
+        try f.request("policy-change")
+        let authorization = try await f.take("authorizePassword")
+        var query: [String: Any]?
+        if phase == "query" {
+            f.complete(authorization, result: ["remote": false])
+            query = try await f.sent("bridge")
+        }
+        f.event(["type": "approvalPolicyChanged"])
+        if phase == "approval" {
+            f.complete(authorization, result: ["remote": false])
+        } else {
+            f.complete(try await f.take("stopBrowser"))
+            try f.nativeReply("bridge", request: query!)
+        }
+        let response = try await f.response("policy-change")
+        try engineExpect(response["ok"] as? Bool == false && response["password"] == nil,
+                         "A policy change released a password under the old approval rule")
+        try engineExpect(!f.posts.contains { ["send", "beginPasswordAccess", "startBrowser"].contains($0["op"] as? String ?? "") },
+                         "A policy change reused the old approval or retried without a new request")
     }
 
     // Expiry or cancellation while native access starts must still restore without sending a get.
@@ -640,5 +682,97 @@ private func runPasswordAuthorizationTests() async throws {
         f.complete(secondEnd)
         try engineExpect(try await f.response("after-expiry")["password"] as? String == "fixture-only",
                          "The next request did not survive a stale expiry")
+    }
+}
+
+@MainActor
+func runPolicyCancellationTests() async throws {
+    // A policy change invalidates all received work, including requests that have
+    // not reached the front of the queue. It does not close connected clients.
+    for stage in ["approval", "query", "unlock", "pin", "begin", "begin-error", "restoring"] {
+        let f = try ScriptFixture(automaticallyAuthorizesPasswords: false)
+        let token = try await f.start()
+        let waitingUnlock = stage == "unlock" || stage == "pin"
+        try f.connect("bridge", token: token, state: waitingUnlock ? "NotInSession" : "SessionKeySet")
+        try f.request("active")
+        var authorization: [String: Any]?
+        var begin: [String: Any]?
+        var query: [String: Any]?
+        var end: [String: Any]?
+        if waitingUnlock {
+            _ = try await f.sent("bridge")
+            if stage == "pin" {
+                try f.state("bridge", "MSG1Set")
+                f.command("pin", pin: "123456")
+                _ = try await f.sent("bridge")
+            }
+        } else {
+            authorization = try await f.take("authorizePassword")
+            if stage != "approval" {
+                let remote = stage != "query"
+                f.complete(authorization!, result: ["remote": remote])
+                if remote { begin = try await f.take("beginPasswordAccess") }
+                if stage == "query" || stage == "restoring" {
+                    if let begin { f.complete(begin) }
+                    query = try await f.sent("bridge")
+                    if stage == "restoring" {
+                        try f.nativeReply("bridge", request: query!)
+                        end = try await f.take("endPasswordAccess")
+                    }
+                }
+            }
+        }
+        try f.request("queued-get")
+        try f.request("queued-list", op: "list")
+        f.event(["type": "approvalPolicyChanged"])
+        if stage == "approval" {
+            _ = try await f.take("cancelAuthorization")
+            f.complete(authorization!, result: ["remote": true])
+        } else if stage == "begin" || stage == "begin-error" {
+            try engineExpect(!f.posts.contains { $0["op"] as? String == "endPasswordAccess" },
+                             "Policy cancellation ended a guard before its begin completed")
+            if stage == "begin-error" {
+                f.complete(begin!, error: "Fixture stale policy", code: "locked")
+            } else {
+                f.complete(begin!)
+                end = try await f.take("endPasswordAccess")
+                try engineExpect(end?["accessID"] as? String == begin?["accessID"] as? String,
+                                 "Policy cancellation restored a different guard")
+            }
+        }
+        if let end {
+            try engineExpect(!f.posts.contains { $0["op"] as? String == "reply" && $0["connection"] as? String == "active" },
+                             "Policy cancellation finished before guard restoration")
+            f.complete(end)
+        }
+        if waitingUnlock || stage == "query" || stage == "begin" || stage == "begin-error" {
+            f.complete(try await f.take("stopBrowser"))
+        }
+        if stage == "query" { try f.nativeReply("bridge", request: query!) }
+        for connection in ["active", "queued-get", "queued-list"] {
+            let response = try await f.response(connection)
+            try engineExpect(response["code"] as? String == "cancelled" && response["password"] == nil && response["usernames"] == nil,
+                             "Policy change did not cancel every received request at stage \(stage)")
+        }
+        try engineExpect(!f.posts.contains {
+            ["send", "authorizePassword", "beginPasswordAccess", "startBrowser", "closeClient"].contains($0["op"] as? String ?? "")
+        }, "An old request retried or a connected client was closed after the policy changed")
+
+        // A request received after the event uses the new policy and can complete.
+        let unlocked = try await f.status()["state"] as? String == "unlocked"
+        try f.request("new-policy")
+        let bridge: String
+        if unlocked { bridge = "bridge" }
+        else {
+            let start = try await f.take("startBrowser")
+            f.complete(start)
+            bridge = "new-bridge"
+            try f.connect(bridge, token: start["token"] as! String, state: "SessionKeySet")
+        }
+        f.complete(try await f.take("authorizePassword"), result: ["remote": false])
+        let newQuery = try await f.sent(bridge)
+        try f.nativeReply(bridge, request: newQuery)
+        try engineExpect(try await f.response("new-policy")["password"] as? String == "fixture-only",
+                         "A new request could not use the new policy")
     }
 }

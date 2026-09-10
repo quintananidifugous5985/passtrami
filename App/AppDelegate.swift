@@ -15,8 +15,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isSettingsVisible = false
     private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, browserRuntime: browserRuntime, companion: companion, onMCPChange: { [weak self] enabled in
         self?.engine.setMCPEnabled(enabled)
-    }, onDeviceApprovalChange: { [weak self] _ in
-        self?.cancelDeviceApprovals()
     }) { [weak self] in
         self?.isSettingsVisible = false
         self?.updateActivationPolicy()
@@ -32,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         createMenu()
         updates.onVisibilityChange = { [weak self] in self?.updateActivationPolicy() }
         engine.onEvent = { [weak self] event in self?.handle(event) }
+        companion.onApprovalPolicyChange = { [weak self] required in
+            self?.cancelDeviceApprovals()
+            self?.engine.setPhoneApprovalRequired(required)
+        }
         companion.start()
         NSApp.registerForRemoteNotifications()
         browserRuntime.onDownload = { [weak self] in
@@ -109,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startEngine() {
-        do { try engine.start() }
+        do { try engine.start(phoneApprovalRequired: companion.requiresPhoneApproval) }
         catch { handle(EngineEvent(type: "state", state: .error, message: "Could not start the password service.")) }
     }
 
@@ -179,19 +181,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         approvalTasks[id] = Task { [weak self] in
             guard let self else { return }
             defer { approvalTasks.removeValue(forKey: id) }
-            let enabled = UserDefaults.standard.object(forKey: "useIPhoneApproval") as? Bool ?? true
-            guard enabled else { engine.finishDeviceApproval(id: id); return }
-            await companion.refresh()
-            guard !Task.isCancelled else { return }
-            guard companion.hasLocalPairing || companion.pairedDevice != nil else {
-                // With no enrolled phone, Apple retains its normal local authentication.
-                engine.finishDeviceApproval(id: id)
-                return
-            }
             do {
-                try await companion.requestApproval(domain: domain, username: username)
+                let remote = try await companion.authorizePasswordAccess(domain: domain, username: username)
                 try Task.checkCancellation()
-                engine.finishDeviceApproval(id: id, remote: true)
+                engine.finishDeviceApproval(id: id, remote: remote)
             } catch is CancellationError {
                 engine.finishDeviceApproval(id: id, error: "Request cancelled.")
             } catch {

@@ -1,6 +1,27 @@
 import CloudKit
 import Foundation
 
+@MainActor
+final class TestApprovalPolicyStore {
+    var required: Bool?
+    var readError: (any Error)?
+    var writeError: (any Error)?
+    var reads = 0
+    var writes: [Bool] = []
+
+    var store: CompanionApprovalPolicyStore {
+        CompanionApprovalPolicyStore(read: { [self] in
+            reads += 1
+            if let readError { throw readError }
+            return required
+        }, write: { [self] required in
+            if let writeError { throw writeError }
+            writes.append(required)
+            self.required = required
+        })
+    }
+}
+
 // This executable compiles the production service against in-memory dependencies.
 // It cannot construct a CloudKit container or use a Keychain signing key.
 @MainActor
@@ -9,6 +30,8 @@ final class CompanionCloudStore {
     static let requestRecordType = "PasstramiRequest"
     static let notificationCategory = "passtrami.approval"
     static var account = "test-account"
+    static var accountError: (any Error)?
+    static var accountReads = 0
     static var pair: CKRecord?
     static var saveCount = 0
     static var removedPairs: [String] = []
@@ -18,6 +41,8 @@ final class CompanionCloudStore {
 
     static func reset() {
         account = "test-account"
+        accountError = nil
+        accountReads = 0
         pair = nil
         saveCount = 0
         removedPairs = []
@@ -28,7 +53,11 @@ final class CompanionCloudStore {
 
     static func requestID(_ id: String) -> CKRecord.ID { CKRecord.ID(recordName: id) }
     static func retryRecordConflicts(_ operation: () async throws -> Void) async throws { try await operation() }
-    func accountID() async throws -> String { Self.account }
+    func accountID() async throws -> String {
+        Self.accountReads += 1
+        if let error = Self.accountError { throw error }
+        return Self.account
+    }
     func prepareZone(accountID: String) async throws { }
     func subscribeToMacChanges(accountID: String) async throws { }
     func subscribe(pairID: String) async throws { }

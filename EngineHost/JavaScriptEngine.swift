@@ -20,13 +20,16 @@ final class JavaScriptEngine {
     private var stopping = false
     private var instanceLock: EngineInstanceLock?
     private var authorizations = Set<String>()
+    private var phoneApprovalRequired: Bool
+    private var approvalPolicyRevision = 0
     private lazy var passwordAccess = TouchIDPreferenceWindow(directory: dataDirectory) { [weak self] accessID in
         Task { @MainActor in self?.deliver(["type": "passwordAccessExpired", "accessID": accessID]) }
     }
 
-    init(resources: URL, dataDirectory: URL) {
+    init(resources: URL, dataDirectory: URL, phoneApprovalRequired: Bool = false) {
         self.resources = resources
         self.dataDirectory = dataDirectory
+        self.phoneApprovalRequired = phoneApprovalRequired
     }
 
     func start() async throws {
@@ -34,7 +37,7 @@ final class JavaScriptEngine {
                                                 attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectory.path)
         instanceLock = try EngineInstanceLock(directory: dataDirectory)
-        try await passwordAccess.recover()
+        try await passwordAccess.recover(requireEnabled: phoneApprovalRequired)
         let pipes = try PasswordPipes(directory: dataDirectory.appendingPathComponent("password-pipes"))
         mcp = MCPBroker(pipes: pipes, forward: { [weak self] id, text in
             self?.deliver(["type": "request", "connection": id, "text": text])
@@ -104,7 +107,7 @@ final class JavaScriptEngine {
                 guard let self else { return }
                 do {
                     // A failed restore must also block later requests that use local approval.
-                    try await passwordAccess.recover()
+                    try await passwordAccess.recover(requireEnabled: phoneApprovalRequired)
                     guard !stopping, authorizations.contains(id) else { return }
                     emit(["type": "deviceApprovalRequired", "id": id, "domain": domain, "username": username])
                 } catch {
@@ -158,6 +161,11 @@ final class JavaScriptEngine {
             startup = Task { [weak self] in
                 guard let self else { return }
                 do {
+                    do { try await passwordAccess.recover(requireEnabled: phoneApprovalRequired) }
+                    catch {
+                        throw EngineFailure("password_access", "Could not restore the password approval setting. Select Unlock to retry.")
+                    }
+                    try Task.checkCancellation()
                     let executable = try await BrowserRuntime.resolve(dataDirectory: dataDirectory) { [weak self] status in
                         self?.updateBrowserRuntime(status)
                         if [.checking, .downloading, .installing].contains(status.phase), let message = status.message {
@@ -216,12 +224,37 @@ final class JavaScriptEngine {
     }
 
     private func command(_ value: [String: Any]) {
+        if value["op"] as? String == "phoneApprovalPolicy" {
+            guard let required = value["required"] as? Bool else { return }
+            // Storage loss can change local approval to unavailable while both
+            // states report false. Every policy event revokes prior access.
+            phoneApprovalRequired = required
+            approvalPolicyRevision += 1
+            let revision = approvalPolicyRevision
+            mcp?.invalidate()
+            deliver(["type": "approvalPolicyChanged"])
+            if required {
+                Task { [weak self] in
+                    guard let self else { return }
+                    do { try await passwordAccess.recover(requireEnabled: true) }
+                    catch {
+                        guard !stopping, revision == approvalPolicyRevision else { return }
+                        deliver(["type": "approvalRecoveryFailed",
+                                 "message": "Could not enable the password approval setting. Select Unlock to retry."])
+                    }
+                }
+            }
+            return
+        }
         if value["op"] as? String == "deviceApprovalResult" {
             guard let id = value["id"] as? String, authorizations.remove(id) != nil else { return }
             if let message = value["error"] as? String {
                 complete(id, error: EngineFailure("device_approval", message))
             } else {
-                complete(id, result: ["remote": value["remote"] as? Bool == true])
+                let remote = value["remote"] as? Bool == true
+                if phoneApprovalRequired && !remote {
+                    complete(id, error: EngineFailure("device_approval", "iPhone approval is required."))
+                } else { complete(id, result: ["remote": remote]) }
             }
             return
         }
@@ -271,7 +304,7 @@ final class JavaScriptEngine {
         guard !stopping else { return }
         mcp?.invalidate()
         stopping = true
-        try? await passwordAccess.recover()
+        try? await passwordAccess.recover(requireEnabled: phoneApprovalRequired)
         FileHandle.standardInput.readabilityHandler = nil
         for task in timers.values { task.cancel() }
         timers.removeAll()

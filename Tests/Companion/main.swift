@@ -99,6 +99,25 @@ rejects("a pairing receipt with a substituted phone") {
         receipt: CompanionPairingReceipt(pairID: trust.pairID, mac: mac, phone: foreignPhone))
 }
 
+let offer = CompanionPairingOffer(pairID: trust.pairID, mac: mac, expiresAt: now.addingTimeInterval(300))
+let authenticatedOffer = try CompanionProtocol.authenticateOffer(offer, code: code)
+let verifiedOffer = try CompanionProtocol.verifyOffer(authenticatedOffer, code: scannedCode, now: now)
+expect(verifiedOffer.mac == mac, "Manual and QR codes must authenticate the same Mac identity")
+rejects("an offer with the wrong code") {
+    _ = try CompanionProtocol.verifyOffer(authenticatedOffer, code: "ABCDEFGHJKMP", now: now)
+}
+rejects("an expired authenticated offer") {
+    _ = try CompanionProtocol.verifyOffer(authenticatedOffer, code: code, now: offer.expiresAt)
+}
+for unsupported in [
+    CompanionPairingOffer(pairID: trust.pairID, mac: mac, expiresAt: offer.expiresAt, purpose: "other-purpose"),
+    CompanionPairingOffer(pairID: trust.pairID, mac: mac, expiresAt: offer.expiresAt, version: 2)
+] {
+    rejects("an authenticated unsupported offer format") {
+        _ = try CompanionProtocol.verifyOffer(CompanionProtocol.authenticateOffer(unsupported, code: code), code: code, now: now)
+    }
+}
+
 @MainActor
 func rejectsAsync(_ label: String, matching matches: (any Error) -> Bool,
                   _ operation: () async throws -> Void) async {

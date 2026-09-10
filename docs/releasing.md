@@ -7,10 +7,10 @@ The release ZIP is hosted on [GitHub Releases](https://github.com/zats/passtrami
 - Install a Developer ID Application identity for the Apple Developer team on the release Mac. Create and download a **Developer ID** provisioning profile for `io.zats.Passtrami` with CloudKit, the `iCloud.io.zats.Passtrami` container, and production push notifications. The profile must allow Production CloudKit and use the release signing certificate. A Mac development profile is not sufficient.
 - Deploy the [companion record schema and indexes](../Companion/README.md) to the CloudKit Production environment before distributing the companion feature.
 - Store notarization credentials with `xcrun notarytool store-credentials PROFILE`. Use the interactive prompts; do not put passwords in scripts or commit them.
-- Run `python3 scripts/sparkle-tools.py`, then use the printed tool directory to run `generate_keys --account io.zats.Passtrami`. The public key must match `SUPublicEDKey` in `Info.plist`. Keep the private key in the Keychain. Do not replace it for each release or export it to GitHub Actions.
+- Run `python3 scripts/sparkle-tools.py generate_keys --account io.zats.Passtrami`. The public key must match `SUPublicEDKey` in `Info.plist`. Keep the private key in the Keychain. Do not replace it for each release or export it to GitHub Actions.
 - In the repository's **Settings → Pages**, select **GitHub Actions** as the source and enforce HTTPS. In the `github-pages` environment, permit the `main` branch and tags matching `v*b*`. Release events run from a tag. This account's Pages site uses the `zats.io` domain.
 
-The tools script reads the exact Sparkle version from `Package.resolved`, downloads that version's official tool archive, and checks its SHA256 against GitHub release metadata. The app framework is resolved separately by Swift Package Manager with its package checksum.
+The tools runner pins Sparkle's version, Git revision, and SHA256 checksum in `scripts/sparkle-tools.py`. The repository, version, and revision must match `Package.resolved`. Update both pins together when upgrading Sparkle, using the checksum from the official manifest linked in the script. The runner uses the same ZIP as Swift Package Manager. Each invocation checks the archive, including cached copies, extracts fresh tools, runs the selected tool, and removes the extracted files. A pin or checksum mismatch stops the release before a tool runs; cached Git objects and manifests cannot change the trusted checksum.
 
 ## Prepare a release
 

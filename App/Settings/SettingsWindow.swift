@@ -13,10 +13,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, browserRuntime: BrowserRuntimeModel,
          companion: CompanionService,
          onMCPChange: @escaping (Bool) -> Void,
-         onDeviceApprovalChange: @escaping (Bool) -> Void,
          didClose: @escaping () -> Void) {
-        model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange,
-                              onDeviceApprovalChange: onDeviceApprovalChange)
+        model = SettingsModel(launchAtLogin: launchAtLogin, onMCPChange: onMCPChange)
         self.companion = companion
         self.didClose = didClose
         let window = NSWindow(
@@ -57,8 +55,6 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         NSApp.activate()
     }
 
-    func refreshDeviceApproval() { model.refreshDeviceApproval() }
-
     private func fitContent(height: CGFloat) {
         guard let window, let contentView = window.contentView else { return }
         var frame = window.frame
@@ -79,25 +75,15 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
 @MainActor
 @Observable
 final class SettingsModel {
-    static let deviceApprovalPreferenceKey = "useIPhoneApproval"
     private let launchAtLogin: LaunchAtLoginController
     private let installer: CLIInstaller
     private let mcpSettings: MCPSettings
     private let onMCPChange: (Bool) -> Void
-    private let onDeviceApprovalChange: (Bool) -> Void
     private(set) var loginStatus: SMAppService.Status = .notRegistered
     private(set) var loginError: String?
     private(set) var cliInstalled = false
     private(set) var cliError: String?
     private(set) var mcpError: String?
-
-    var deviceApprovalEnabled: Bool {
-        didSet {
-            guard deviceApprovalEnabled != oldValue else { return }
-            UserDefaults.standard.set(deviceApprovalEnabled, forKey: Self.deviceApprovalPreferenceKey)
-            onDeviceApprovalChange(deviceApprovalEnabled)
-        }
-    }
 
     var mcpEnabled: Bool {
         didSet {
@@ -116,15 +102,12 @@ final class SettingsModel {
     }
 
     init(launchAtLogin: LaunchAtLoginController, installer: CLIInstaller = CLIInstaller(),
-         mcpSettings: MCPSettings = MCPSettings(), onMCPChange: @escaping (Bool) -> Void,
-         onDeviceApprovalChange: @escaping (Bool) -> Void) {
+         mcpSettings: MCPSettings = MCPSettings(), onMCPChange: @escaping (Bool) -> Void) {
         self.launchAtLogin = launchAtLogin
         self.installer = installer
         self.mcpSettings = mcpSettings
         self.onMCPChange = onMCPChange
-        self.onDeviceApprovalChange = onDeviceApprovalChange
         mcpEnabled = mcpSettings.isEnabled
-        deviceApprovalEnabled = UserDefaults.standard.object(forKey: Self.deviceApprovalPreferenceKey) as? Bool ?? true
     }
 
     func refresh() {
@@ -132,11 +115,6 @@ final class SettingsModel {
         loginStatus = launchAtLogin.status
         loginError = launchAtLogin.operationError
         cliInstalled = installer.isInstalled
-        refreshDeviceApproval()
-    }
-
-    func refreshDeviceApproval() {
-        deviceApprovalEnabled = UserDefaults.standard.object(forKey: Self.deviceApprovalPreferenceKey) as? Bool ?? true
     }
 
     func openLoginItems() { launchAtLogin.openLoginItems() }

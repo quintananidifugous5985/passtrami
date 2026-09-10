@@ -12,14 +12,22 @@
   let pending = null, queue = Promise.resolve(), activeAccess = null;
 
   function post(message) { __nativePost(JSON.stringify(message)); }
+  function clientError(client) {
+    return client?.policyError || (client?.cancelled ? new RequestError('cancelled', 'Request cancelled.') : null);
+  }
+  function checkClient(client) {
+    const error = clientError(client);
+    if (error) throw error;
+  }
   function native(op, values = {}, client) {
     return new Promise((resolve, reject) => {
       const id = String(++sequence);
-      if (client?.cancelled) { reject(new RequestError('cancelled', 'Request cancelled.')); return; }
+      const error = clientError(client);
+      if (error) { reject(error); return; }
       const operation = { op, resolve, reject };
       operations.set(id, operation);
       operation.removeCancel = client?.onCancel(() => {
-        cancelAuthorization(id, new RequestError('cancelled', 'Request cancelled.'));
+        cancelAuthorization(id, clientError(client));
       });
       if (op === 'authorizePassword') {
         operation.timer = later(() => {
@@ -141,7 +149,8 @@
     await launch(); beginChallenge();
   }
   function ensureUnlocked(client) {
-    if (client.cancelled) return Promise.reject(new RequestError('cancelled', 'Request cancelled.'));
+    const error = clientError(client);
+    if (error) return Promise.reject(error);
     if (phase === 'unlocked') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const item = { resolve, reject };
@@ -149,7 +158,7 @@
         waiters.delete(item); cancelTimer(item.timer); item.removeCancel(); reject(error);
         if (!appUnlockRequested && !waiters.size && phase !== 'unlocked') void lock(error);
       };
-      item.removeCancel = client.onCancel(() => remove(new RequestError('cancelled', 'Request cancelled.')));
+      item.removeCancel = client.onCancel(() => remove(clientError(client)));
       item.timer = later(() => remove(new RequestError('timeout', 'Unlock timed out.')), 900000);
       waiters.add(item);
       requestUnlock().catch(remove);
@@ -170,11 +179,12 @@
     return stopping;
   }
   function nativeRequest(message, client) {
-    if (client.cancelled) return Promise.reject(new RequestError('cancelled', 'Request cancelled.'));
+    const error = clientError(client);
+    if (error) return Promise.reject(error);
     return new Promise((resolve, reject) => {
       const id = __uuid();
       const removeCancel = client.onCancel(() => {
-        if (pending?.id === id) rejectPending(new RequestError('cancelled', 'Request cancelled.'));
+        if (pending?.id === id) rejectPending(clientError(client));
       });
       const timer = later(() => {
         if (pending?.id === id) rejectPending(new RequestError('timeout', "Apple's authentication request timed out."));
@@ -194,7 +204,7 @@
       const currentGeneration = generation;
       const currentSessionRevision = sessionRevision;
       const authorization = list ? null : await native('authorizePassword', { domain, username }, client);
-      if (client.cancelled) throw new RequestError('cancelled', 'Request cancelled.');
+      checkClient(client);
       if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') {
         throw new RequestError('locked', 'The password session changed. Try again.');
       }
@@ -206,6 +216,7 @@
           await native('beginPasswordAccess', { accessID });
         }
         try {
+          checkClient(client);
           if (activeAccess?.expired) throw new RequestError('timeout', 'Password access timed out. Try again.');
           if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') throw new RequestError('locked', 'The password session changed. Try again.');
           data = await nativeRequest(message, client);
@@ -220,10 +231,11 @@
         activeAccess = null;
         // End the old native session before another request can receive a late reply.
         await lock(error);
+        checkClient(client);
         if (error.code !== 'locked' || attempt) throw error;
         continue;
       }
-      if (client.cancelled) throw new RequestError('cancelled', 'Request cancelled.');
+      checkClient(client);
       if (generation !== currentGeneration || sessionRevision !== currentSessionRevision || phase !== 'unlocked') {
         throw new RequestError('locked', 'The password session changed. Try again.');
       }
@@ -253,11 +265,17 @@
       if (!['get', 'list'].includes(request?.op)) throw new RequestError('invalid_request', 'Unknown command.');
     } catch (error) { reply(id, failure(error)); return; }
     const handlers = new Set();
-    const client = { cancelled: false,
+    const client = { cancelled: false, policyError: null,
       onCancel(handler) { handlers.add(handler); return () => handlers.delete(handler); },
       cancel() {
         if (this.cancelled) return;
         this.cancelled = true;
+        for (const handler of [...handlers]) handler();
+        handlers.clear();
+      },
+      cancelForPolicy(error) {
+        if (this.cancelled || this.policyError) return;
+        this.policyError = error;
         for (const handler of [...handlers]) handler();
         handlers.clear();
       }
@@ -267,12 +285,12 @@
       client.cancel(); post({ op: 'closeClient', connection: id });
     }, 1020000);
     const work = queue.then(() => {
-      if (client.cancelled) throw new RequestError('cancelled', 'Request cancelled.');
+      checkClient(client);
       return handleRequest(request, client);
     });
     queue = work.catch(() => {});
-    work.then(result => { if (!client.cancelled) reply(id, result); })
-      .catch(error => { if (!client.cancelled) reply(id, failure(error)); })
+    work.then(result => { if (!client.cancelled) reply(id, client.policyError ? failure(client.policyError) : result); })
+      .catch(error => { if (!client.cancelled) reply(id, failure(client.policyError || error)); })
       .finally(() => { cancelTimer(deadline); clients.delete(id); });
   }
   function receiveBridge(id, text) {
@@ -317,6 +335,19 @@
         void command(event.command).catch(() => emit({ type: 'pinError', message: 'The request could not be completed. Try Unlock again.' })); break;
       case 'request': receiveRequest(event.connection, event.text); break;
       case 'clientClosed': clients.get(event.connection)?.cancel(); break;
+      case 'approvalPolicyChanged': {
+        sessionRevision++;
+        const error = new RequestError('cancelled', 'Password approval settings changed. Try again.');
+        for (const client of clients.values()) client.cancelForPolicy(error);
+        cancelAuthorizations(error); rejectPending(error);
+        break;
+      }
+      case 'approvalRecoveryFailed': {
+        const error = new RequestError('password_access', event.message);
+        setPhase('error', error.message);
+        void lock(error, 'error');
+        break;
+      }
       case 'bridgeOpen':
         candidates.set(event.connection, { generation }); break;
       case 'bridgeText': receiveBridge(event.connection, event.text); break;

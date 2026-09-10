@@ -100,7 +100,7 @@ func normalRestoration() async throws {
         try expect(temporary == false, "READY must follow a verified false write")
         try await window.end("normal")
         let restored = try fixture.read()
-        try expect(restored == original, "end must restore true, false, or absence before it completes")
+        try expect(restored == true, "end must enable protection regardless of the previous value")
         try expect(!FileManager.default.fileExists(atPath: fixture.journal.path), "Successful restoration must remove journal")
         try expect(!events.contains("normal"), "A successful window must not expire")
     }
@@ -184,25 +184,46 @@ func startupFailure() async throws {
     let fixture = try Fixture()
     defer { fixture.cleanup() }
     try fixture.set(true)
-    try FileManager.default.createDirectory(at: fixture.journal, withIntermediateDirectories: false)
-    let window = fixture.window(Expirations())
-    do { try await window.begin("bad-journal"); throw TestFailure(message: "Invalid journal was accepted") }
+    // The test helper reaches the vulnerable point: false was written, but no
+    // READY or recovery marker exists. The production parent's repair must run.
+    let helper = fixture.directory.appendingPathComponent("crash-before-ready")
+    try Data("""
+    #!/bin/sh
+    /usr/bin/defaults write "$5" TouchIDToAutoFill -bool NO
+    kill -KILL $$
+    """.utf8).write(to: helper)
+    try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: helper.path)
+    let events = Expirations()
+    let window = TouchIDPreferenceWindow(directory: fixture.directory, suite: fixture.suite, executable: helper) { events.append($0) }
+    do { try await window.begin("startup-crash"); throw TestFailure(message: "Startup crash was accepted") }
     catch is CocoaError { }
     let restored = try fixture.read()
-    try expect(restored == true, "Failed startup must not change the preference")
+    try expect(restored == true, "Parent must restore after a crash before READY even with no marker")
+    try expect(events.contains("startup-crash"), "Startup crash must expire the request")
+    try await window.recover()
 }
 
 func journalRecovery() async throws {
-    for original: Bool? in [true, false, nil] {
+    for contents in [Data(), Data("corrupt".utf8), Data(#"{"wasPresent":true,"value":false}"#.utf8)] {
         let fixture = try Fixture()
         defer { fixture.cleanup() }
         try fixture.set(false)
-        let snapshot: [String: Any] = ["wasPresent": original != nil, "value": original ?? true]
-        try JSONSerialization.data(withJSONObject: snapshot).write(to: fixture.journal)
+        try contents.write(to: fixture.journal)
         try await fixture.window(Expirations()).recover()
         let restored = try fixture.read()
-        try expect(restored == original, "Recovery must preserve original presence and value")
+        try expect(restored == true, "Empty, damaged, and forged recovery files must enable protection")
+        try expect(!FileManager.default.fileExists(atPath: fixture.journal.path), "Repair must remove the marker")
     }
+    let fixture = try Fixture()
+    defer { fixture.cleanup() }
+    try fixture.set(false)
+    let window = fixture.window(Expirations())
+    try await window.recover()
+    let unchanged = try fixture.read()
+    try expect(unchanged == false, "Local-only use with no interrupted operation must not change Apple's setting")
+    try await window.recover(requireEnabled: true)
+    let enabled = try fixture.read()
+    try expect(enabled == true, "Required phone mode must repair protection even when the marker is missing")
 }
 
 func overlappingGuards() async throws {
@@ -211,14 +232,29 @@ func overlappingGuards() async throws {
     try fixture.set(nil)
     let events = Expirations(), first = fixture.window(events), second = fixture.window(Expirations())
     try await first.begin("first")
-    // The second process must wait for the first guard's restoration before it snapshots.
+    // The second process must wait for the first guard to restore protection.
     try await second.begin("second")
     try expect(events.contains("first"), "The second guard must not overlap the first window")
     try await second.end("second")
     let restored = try fixture.read()
-    try expect(restored == nil, "Sequential guards must preserve the original absent value")
+    try expect(restored == true, "Sequential guards must leave protection enabled")
     do { try await first.end("first"); throw TestFailure(message: "First expired guard was accepted") }
     catch is CocoaError { }
+}
+
+func markerTamperingDuringAccess() async throws {
+    for contents: Data? in [nil, Data("corrupt".utf8), Data(#"{"wasPresent":true,"value":false}"#.utf8)] {
+        let fixture = try Fixture()
+        defer { fixture.cleanup() }
+        try fixture.set(true)
+        let window = fixture.window(Expirations())
+        try await window.begin("tamper")
+        if let contents { try contents.write(to: fixture.journal) }
+        else { try FileManager.default.removeItem(at: fixture.journal) }
+        try await window.end("tamper")
+        let enabled = try fixture.read()
+        try expect(enabled == true, "Changing or removing the marker must not weaken restoration")
+    }
 }
 
 func restorationFailure() async throws {
@@ -227,17 +263,78 @@ func restorationFailure() async throws {
     try fixture.set(true)
     let events = Expirations(), window = fixture.window(events)
     try await window.begin("restore-failure")
-    // Corrupt only the isolated recovery journal. The guard must refuse success and retain it.
-    try Data("invalid journal".utf8).write(to: fixture.journal)
+    // Replace the isolated plist with a directory. A verified write must fail.
+    let plist = URL(fileURLWithPath: fixture.suite + ".plist")
+    try FileManager.default.removeItem(at: plist)
+    try FileManager.default.createDirectory(at: plist, withIntermediateDirectories: false)
     do { try await window.end("restore-failure"); throw TestFailure(message: "Failed restoration released access") }
     catch is CocoaError { }
     try expect(events.contains("restore-failure"), "Restoration failure must expire the request")
-    try expect(FileManager.default.fileExists(atPath: fixture.journal.path), "Failed restoration must retain journal")
-    let snapshot: [String: Any] = ["wasPresent": true, "value": true]
-    try JSONSerialization.data(withJSONObject: snapshot).write(to: fixture.journal)
+    do { try await window.begin("blocked"); throw TestFailure(message: "Failed recovery allowed another request") }
+    catch is CocoaError { }
+    try FileManager.default.removeItem(at: plist)
+    try fixture.set(false)
+    try await window.recover()
+    let enabled = try fixture.read()
+    try expect(enabled == true, "Recovery after a failed write must enable protection")
+}
+
+@MainActor
+func recoveryWhileEndIsPending() async throws {
+    let fixture = try Fixture()
+    var outputHolder: pid_t = 0
+    defer {
+        if outputHolder > 0 { kill(outputHolder, SIGKILL) }
+        fixture.cleanup()
+    }
+    try fixture.set(true)
+    let helper = fixture.directory.appendingPathComponent("expire-with-open-output")
+    // A separate process keeps stdout open after this guard exits. This holds
+    // monitor before its final callback while recover sees an exited guard.
+    try Data("""
+    #!/bin/sh
+    /usr/bin/defaults write "$5" TouchIDToAutoFill -bool NO
+    /bin/sleep 60 &
+    printf '%s' "$!" > "$3/output-holder.pid"
+    printf 'READY\\n'
+    /bin/cat > /dev/null
+    printf 'EXPIRED\\n'
+    exit 0
+    """.utf8).write(to: helper)
+    try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: helper.path)
+    let events = Expirations()
+    let window = TouchIDPreferenceWindow(directory: fixture.directory, suite: fixture.suite,
+                                        executable: helper) { events.append($0) }
+    try await window.begin("recover-pending-end")
+    let guardPID = try fixture.guardPID()
+    let holderText = try String(contentsOf: fixture.directory.appendingPathComponent("output-holder.pid"), encoding: .utf8)
+    guard let holder = pid_t(holderText), holder > 0 else { throw TestFailure(message: "Missing output holder") }
+    outputHolder = holder
+    var completed = false
+    var endError: NSError?
+    Task { @MainActor in
+        do { try await window.end("recover-pending-end") }
+        catch { endError = error as NSError }
+        completed = true
+    }
+    let exitDeadline = ContinuousClock.now + .seconds(3)
+    while !(events.contains("recover-pending-end") && kill(guardPID, 0) != 0) {
+        try expect(ContinuousClock.now < exitDeadline, "Guard did not expire and exit")
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    try expect(!completed, "Test must hold monitor before end completes")
     try await window.recover()
     let restored = try fixture.read()
-    try expect(restored == true, "Recovery after restoration failure must work")
+    try expect(restored == true, "Recovery must enable protection before completing end")
+    kill(outputHolder, SIGKILL)
+    outputHolder = 0
+    let endDeadline = ContinuousClock.now + .seconds(2)
+    while !completed && ContinuousClock.now < endDeadline {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    try expect(completed, "Recovery discarded the pending end continuation")
+    try expect(endError?.domain == NSCocoaErrorDomain && endError?.code == CocoaError.Code.userCancelled.rawValue,
+               "Recovered expired access must end with cancellation")
 }
 
 Task {
@@ -249,8 +346,10 @@ Task {
         try await startupFailure()
         try await journalRecovery()
         try await overlappingGuards()
+        try await markerTamperingDuringAccess()
         try await restorationFailure()
-        print("Preference guard checks passed: original values, deadline, parent crash, guard crash, startup failure, restore failure, recovery, cross-process lock")
+        try await recoveryWhileEndIsPending()
+        print("Preference guard checks passed: safe baseline, forged/missing marker, deadline, parent crash, guard crash, pre-READY crash, restore failure, recovery, pending end recovery, cross-process lock")
         exit(0)
     } catch {
         let message = (error as? TestFailure)?.message ?? String(describing: error)

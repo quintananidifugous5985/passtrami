@@ -28,7 +28,7 @@ final class EngineProcess {
 
     var isRunning: Bool { process?.isRunning == true }
 
-    func start() throws {
+    func start(phoneApprovalRequired: Bool) throws {
         guard !isRunning else { return }
         guard let resources = Bundle.main.resourceURL else {
             throw CocoaError(.fileNoSuchFile)
@@ -44,6 +44,7 @@ final class EngineProcess {
             "--data-dir", FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent("Library/Application Support/io.zats.Passtrami").path
         ]
+        if phoneApprovalRequired { child.arguments?.append("--require-phone-approval") }
         child.standardInput = stdin
         child.standardOutput = stdout
         child.standardError = FileHandle.nullDevice
@@ -82,6 +83,10 @@ final class EngineProcess {
 
     func setMCPEnabled(_ enabled: Bool) {
         sendCommand(["op": "mcp", "enabled": enabled])
+    }
+
+    func setPhoneApprovalRequired(_ required: Bool) {
+        sendCommand(["op": "phoneApprovalPolicy", "required": required])
     }
 
     func finishDeviceApproval(id: String, remote: Bool = false, error: String? = nil) {

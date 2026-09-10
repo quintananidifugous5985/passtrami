@@ -1,6 +1,7 @@
 import CloudKit
 import CryptoKit
 import Foundation
+import LocalAuthentication
 import Observation
 import Security
 #if os(iOS)
@@ -20,6 +21,10 @@ final class CompanionService {
     private(set) var pairingExpiresAt: Date?
     private(set) var pairingID: String?
     private(set) var hasLocalPairing = false
+    private enum ApprovalPolicy { case unconfigured, local, phone, unavailable }
+    private var approvalPolicy = ApprovalPolicy.unconfigured
+    var requiresPhoneApproval: Bool { approvalPolicy == .phone }
+    var approvalPolicyNeedsSetup: Bool { approvalPolicy == .unconfigured || approvalPolicy == .unavailable }
     private(set) var refreshSucceeded = false
     private(set) var pendingRequests: [CompanionRequest] = []
     private(set) var history: [CompanionRequest] = []
@@ -28,6 +33,9 @@ final class CompanionService {
 
     @ObservationIgnored private let cloud = CompanionCloudStore()
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let policyStore: CompanionApprovalPolicyStore
+    @ObservationIgnored private let authenticatePolicyChange: @MainActor () async throws -> Void
+    @ObservationIgnored var onApprovalPolicyChange: ((Bool) -> Void)?
     @ObservationIgnored private let deviceID: String
     @ObservationIgnored private let signingKey: CompanionSigningKey
     @ObservationIgnored private var trust: CompanionTrust?
@@ -39,14 +47,26 @@ final class CompanionService {
     @ObservationIgnored private var remoteRefreshPending = false
     @ObservationIgnored private var subscribedPairID: String?
 
-    init(role: CompanionRole, defaults: UserDefaults = .standard) {
+    init(role: CompanionRole, defaults: UserDefaults = .standard,
+         policyStore: CompanionApprovalPolicyStore = .keychain,
+         authenticatePolicyChange: @escaping @MainActor () async throws -> Void = {
+             let context = LAContext()
+             defer { context.invalidate() }
+             guard try await context.evaluatePolicy(.deviceOwnerAuthentication,
+                 localizedReason: String(localized: "Use local approval for passwords.")) else {
+                 throw CompanionError.cancelled
+             }
+         }) {
         self.role = role
         self.defaults = defaults
+        self.policyStore = policyStore
+        self.authenticatePolicyChange = authenticatePolicyChange
         let idKey = "companion.deviceID.\(role.rawValue)"
         let id = defaults.string(forKey: idKey) ?? UUID().uuidString
         defaults.set(id, forKey: idKey)
         deviceID = id
         signingKey = CompanionSigningKey(tag: Data("io.zats.Passtrami.companion.\(id)".utf8), requiresPresence: role == .phone)
+        if role == .mac { try? reloadApprovalPolicy() }
         if let data = defaults.data(forKey: "companion.trust"),
            let saved = try? CompanionProtocol.decode(CompanionTrust.self, from: data) {
             trust = saved
@@ -140,7 +160,7 @@ final class CompanionService {
             let state = record["state"] as? String
             if state == "paired" { throw CompanionError.message("An iPhone is already paired. Unpair it before you continue.") }
             if state == "offered", let data = record["offer"] as? Data {
-                let old = try CompanionProtocol.decode(CompanionPairingOffer.self, from: data)
+                let old = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: data).offer
                 if old.mac.id != deviceID && old.expiresAt > Date() {
                     throw CompanionError.message("Another Mac has an active pairing code. Wait for it to expire.")
                 }
@@ -158,10 +178,10 @@ final class CompanionService {
             }
             let code = String(characters)
             let offer = CompanionPairingOffer(pairID: UUID().uuidString, mac: device,
-                codeDigest: CompanionProtocol.digest(code: code), expiresAt: Date().addingTimeInterval(CompanionProtocol.pairingLifetime))
+                expiresAt: Date().addingTimeInterval(CompanionProtocol.pairingLifetime))
             record["pairID"] = offer.pairID
             record["state"] = "offered"
-            record["offer"] = try CompanionProtocol.encode(offer)
+            record["offer"] = try CompanionProtocol.encode(CompanionProtocol.authenticateOffer(offer, code: code))
             record["phone"] = nil
             record["proof"] = nil
             record["expiresAt"] = offer.expiresAt
@@ -185,17 +205,16 @@ final class CompanionService {
                   record["state"] as? String == "offered", let data = record["offer"] as? Data else {
                 throw CompanionError.message("No pairing code is available. Create a new code on your Mac.")
             }
-            let offer = try CompanionProtocol.decode(CompanionPairingOffer.self, from: data)
-            guard offer.expiresAt > Date(), offer.codeDigest == CompanionProtocol.digest(code: code) else {
-                throw CompanionError.message("The pairing code is incorrect or has expired.")
-            }
+            let authenticated = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: data)
+            let offer = try CompanionProtocol.verifyOffer(authenticated, code: code, now: Date())
+            guard record["pairID"] as? String == offer.pairID else { throw CompanionError.invalidSignature }
             let phone = try makeLocalDevice()
             let receipt = CompanionPairingReceipt(pairID: offer.pairID, mac: offer.mac, phone: phone)
             record["phone"] = try CompanionProtocol.encode(phone)
             record["proof"] = try CompanionProtocol.pairingProof(code: code, receipt: receipt)
             record["state"] = "paired"
             _ = try await cloud.save(record)
-            saveTrust(CompanionTrust(accountID: currentAccountID!, pairID: offer.pairID, mac: offer.mac, phone: phone))
+            try saveTrust(CompanionTrust(accountID: currentAccountID!, pairID: offer.pairID, mac: offer.mac, phone: phone))
             try await refreshState()
         }
     }
@@ -215,18 +234,22 @@ final class CompanionService {
             }
             if let record = try await cloud.record(CompanionCloudStore.pairRecordID) {
                 var ownsRecord = false
+                // No legacy offer decoder: unpair with the previous apps before
+                // installing this format. Unknown records do not establish ownership.
                 if let data = record["offer"] as? Data,
-                   let offer = try? CompanionProtocol.decode(CompanionPairingOffer.self, from: data),
-                   record["pairID"] as? String == offer.pairID {
+                   let authenticated = try? CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: data),
+                   record["pairID"] as? String == authenticated.offer.pairID {
+                    let offer = authenticated.offer
                     if let capturedTrust, record["state"] as? String == "paired",
                        let phoneData = record["phone"] as? Data,
                        let phone = try? CompanionProtocol.decode(CompanionDevice.self, from: phoneData) {
                         ownsRecord = offer.pairID == capturedTrust.pairID
                             && offer.mac == capturedTrust.mac && phone == capturedTrust.phone
                     } else if capturedTrust == nil, role == .mac, offerAccountID != nil, let offerCode,
-                              offer.pairID == offerPairID, offer.expiresAt == offerExpiry, offer.mac.id == deviceID,
-                              offer.codeDigest == CompanionProtocol.digest(code: offerCode) {
+                              offer.pairID == offerPairID, offer.expiresAt == offerExpiry, offer.mac.id == deviceID {
                         if offer.mac.publicKey == (try signingKey.publicKey()) {
+                            // Expiry ends enrollment, but does not prevent cancellation of our own offer.
+                            _ = try CompanionProtocol.verifyOfferAuthentication(authenticated, code: offerCode)
                             if record["state"] as? String == "offered" {
                                 ownsRecord = true
                             } else if record["state"] as? String == "paired",
@@ -263,6 +286,36 @@ final class CompanionService {
 
     func decline(requestID: String) async {
         await decide(requestID: requestID, approved: false)
+    }
+
+    func setPhoneApprovalRequired(_ required: Bool) async {
+        await perform {
+            guard role == .mac else { throw CompanionError.message("Change password approval settings on your Mac.") }
+            // A failed read must still permit deliberate, authenticated recovery.
+            try? reloadApprovalPolicy()
+            guard approvalPolicyNeedsSetup || required != requiresPhoneApproval else { return }
+            if required {
+                guard trust != nil else { throw CompanionError.notPaired }
+            } else {
+                try await authenticatePolicyChange()
+                try Task.checkCancellation()
+            }
+            try saveApprovalPolicy(required)
+        }
+    }
+
+    // The Mac routes every password request through the persisted local policy.
+    // Pairing loss or an unavailable cloud account must not select local approval.
+    func authorizePasswordAccess(domain: String, username: String) async throws -> Bool {
+        guard role == .mac else { throw CompanionError.message("Password requests must start on your Mac.") }
+        try Task.checkCancellation()
+        try reloadApprovalPolicy()
+        guard !approvalPolicyNeedsSetup else {
+            throw CompanionError.message("Choose an approval method in Devices settings before you request a password.")
+        }
+        guard requiresPhoneApproval else { return false }
+        try await requestApproval(domain: domain, username: username)
+        return true
     }
 
     func requestApproval(domain: String, username: String) async throws {
@@ -377,7 +430,8 @@ final class CompanionService {
             guard let offerData = record["offer"] as? Data, let phoneData = record["phone"] as? Data else {
                 throw CompanionError.invalidSignature
             }
-            let offer = try CompanionProtocol.decode(CompanionPairingOffer.self, from: offerData)
+            let authenticated = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: offerData)
+            let offer = authenticated.offer
             let phone = try CompanionProtocol.decode(CompanionDevice.self, from: phoneData)
             let expected = role == .mac ? offer.mac : phone
             guard expected.id == deviceID, expected.publicKey == (try makeLocalDevice()).publicKey else {
@@ -387,12 +441,15 @@ final class CompanionService {
                 guard trust.pairID == offer.pairID, trust.mac == offer.mac, trust.phone == phone else { throw CompanionError.invalidSignature }
             } else {
                 guard role == .mac, let code = defaults.string(forKey: "companion.offerCode"),
+                      defaults.string(forKey: "companion.offerAccountID") == currentAccountID,
+                      defaults.string(forKey: "companion.offerPairID") == offer.pairID,
                       offer.expiresAt > Date(), let proof = record["proof"] as? Data else {
                     throw CompanionError.message("Pairing could not be verified. Unpair the devices and create a new code.")
                 }
+                _ = try CompanionProtocol.verifyOffer(authenticated, code: code, now: Date())
                 try CompanionProtocol.verifyPairingProof(proof, code: code,
                     receipt: CompanionPairingReceipt(pairID: offer.pairID, mac: offer.mac, phone: phone))
-                saveTrust(CompanionTrust(accountID: currentAccountID!, pairID: offer.pairID, mac: offer.mac, phone: phone))
+                try saveTrust(CompanionTrust(accountID: currentAccountID!, pairID: offer.pairID, mac: offer.mac, phone: phone))
             }
             clearCode()
             if role == .phone, subscribedPairID != offer.pairID {
@@ -477,7 +534,7 @@ final class CompanionService {
         guard let record = try await cloud.record(CompanionCloudStore.pairRecordID),
               record["state"] as? String == "paired", record["pairID"] as? String == expected.pairID,
               let offerData = record["offer"] as? Data, let phoneData = record["phone"] as? Data else { throw CompanionError.notPaired }
-        let offer = try CompanionProtocol.decode(CompanionPairingOffer.self, from: offerData)
+        let offer = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: offerData).offer
         let phone = try CompanionProtocol.decode(CompanionDevice.self, from: phoneData)
         guard offer.mac == expected.mac, phone == expected.phone else { throw CompanionError.invalidSignature }
         return record
@@ -510,13 +567,34 @@ final class CompanionService {
         return device
     }
 
-    private func saveTrust(_ value: CompanionTrust) {
-        if role == .mac, trust?.pairID != value.pairID { defaults.set(true, forKey: "useIPhoneApproval") }
+    private func saveTrust(_ value: CompanionTrust) throws {
+        if role == .mac, trust?.pairID != value.pairID { try saveApprovalPolicy(true) }
         trust = value
         defaults.set(try? CompanionProtocol.encode(value), forKey: "companion.trust")
         hasLocalPairing = true
         pairingID = value.pairID
         pairedDevice = role == .mac ? value.phone : value.mac
+    }
+
+    private func reloadApprovalPolicy() throws {
+        do {
+            let required = try policyStore.read()
+            setApprovalPolicy(required.map { $0 ? .phone : .local } ?? .unconfigured)
+        } catch {
+            setApprovalPolicy(.unavailable)
+            throw error
+        }
+    }
+
+    private func saveApprovalPolicy(_ required: Bool) throws {
+        try policyStore.write(required)
+        setApprovalPolicy(required ? .phone : .local)
+    }
+
+    private func setApprovalPolicy(_ policy: ApprovalPolicy) {
+        guard approvalPolicy != policy else { return }
+        approvalPolicy = policy
+        onApprovalPolicyChange?(requiresPhoneApproval)
     }
 
     private func clearTrust() {
@@ -574,6 +652,7 @@ final class CompanionService {
 
     private func userMessage(_ error: any Error) -> String {
         if let error = error as? CompanionError { return error.localizedDescription }
+        if let error = error as? CompanionApprovalPolicyStore.StoreError { return error.localizedDescription }
         if let error = error as? CKError {
             switch error.code {
             case .notAuthenticated: return CompanionError.accountUnavailable.localizedDescription

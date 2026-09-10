@@ -6,6 +6,15 @@ struct UnpairTests {
     static let mac = CompanionDevice(id: "test-mac", name: "Test Mac", role: .mac, publicKey: Data("mac-key".utf8))
     static let phone = CompanionDevice(id: "test-phone", name: "Test Phone", role: .phone, publicKey: Data("phone-key".utf8))
     static let trust = CompanionTrust(accountID: "test-account", pairID: "old-pair", mac: mac, phone: phone)
+    static var policy = TestApprovalPolicyStore()
+
+    static func makeService(role: CompanionRole, defaults: UserDefaults,
+        authenticatePolicyChange: @escaping @MainActor () async throws -> Void = {
+            preconditionFailure("This test must not request local authentication")
+        }) -> CompanionService {
+        CompanionService(role: role, defaults: defaults, policyStore: policy.store,
+            authenticatePolicyChange: authenticatePolicyChange)
+    }
 
     static func expect(_ value: @autoclosure () -> Bool, _ message: String) {
         precondition(value(), message)
@@ -18,17 +27,18 @@ struct UnpairTests {
         defaults.set(mac.id, forKey: "companion.deviceID.mac")
         defaults.set(phone.id, forKey: "companion.deviceID.phone")
         CompanionCloudStore.reset()
+        policy = TestApprovalPolicyStore()
         try await operation(defaults)
     }
 
     static func pairRecord(pairID: String = "old-pair", mac: CompanionDevice = mac,
                            phone: CompanionDevice = phone) throws -> CKRecord {
         let offer = CompanionPairingOffer(pairID: pairID, mac: mac,
-            codeDigest: Data(), expiresAt: Date().addingTimeInterval(300))
+            expiresAt: Date().addingTimeInterval(300))
         let record = CKRecord(recordType: "PasstramiPair", recordID: CompanionCloudStore.pairRecordID)
         record["pairID"] = pairID
         record["state"] = "paired"
-        record["offer"] = try CompanionProtocol.encode(offer)
+        record["offer"] = try CompanionProtocol.encode(CompanionProtocol.authenticateOffer(offer, code: "ABCDEFGHJKMN"))
         record["phone"] = try CompanionProtocol.encode(phone)
         return record
     }
@@ -38,7 +48,7 @@ struct UnpairTests {
     }
 
     static func makeOffer(_ defaults: UserDefaults) async throws -> CKRecord {
-        let service = CompanionService(role: .mac, defaults: defaults)
+        let service = makeService(role: .mac, defaults: defaults)
         await service.beginPairing()
         expect(service.errorMessage == nil, "The test Mac must create its offer")
         let record = CompanionCloudStore.pair!
@@ -51,7 +61,7 @@ struct UnpairTests {
     }
 
     static func claimOffer(_ record: CKRecord, defaults: UserDefaults, validProof: Bool = true) throws {
-        let offer = try CompanionProtocol.decode(CompanionPairingOffer.self, from: record["offer"] as! Data)
+        let offer = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: record["offer"] as! Data).offer
         let code = defaults.string(forKey: "companion.offerCode")!
         record["state"] = "paired"
         record["phone"] = try CompanionProtocol.encode(phone)
@@ -63,7 +73,7 @@ struct UnpairTests {
         try await withDefaults { defaults in
             try saveTrust(defaults)
             CompanionCloudStore.pair = try pairRecord()
-            let service = CompanionService(role: .phone, defaults: defaults)
+            let service = makeService(role: .phone, defaults: defaults)
             await service.unpair()
             expect(CompanionCloudStore.pair?["state"] as? String == "revoked", "Unpair must revoke the current pair")
             expect(!service.hasLocalPairing && service.errorMessage == nil, "Successful unpair must clear local trust")
@@ -90,7 +100,7 @@ struct UnpairTests {
                                             mac: cloudMac, phone: cloudPhone)
                 if changed == "record pair ID" { record["pairID"] = "new-pair" }
                 CompanionCloudStore.pair = record
-                let service = CompanionService(role: .phone, defaults: defaults)
+                let service = makeService(role: .phone, defaults: defaults)
                 await service.unpair()
                 expect(CompanionCloudStore.saveCount == 0, "A changed \(changed) must prevent revocation")
                 expect(CompanionCloudStore.pair?["state"] as? String == "paired", "The new pair must remain active")
@@ -101,14 +111,14 @@ struct UnpairTests {
 
         try await withDefaults { defaults in
             CompanionCloudStore.pair = try pairRecord()
-            await CompanionService(role: .phone, defaults: defaults).unpair()
+            await makeService(role: .phone, defaults: defaults).unpair()
             expect(CompanionCloudStore.saveCount == 0 && CompanionCloudStore.removedPairs.isEmpty,
                    "An unpaired phone must not change another pair or its subscriptions")
         }
 
         try await withDefaults { defaults in
             _ = try await makeOffer(defaults)
-            let restarted = CompanionService(role: .mac, defaults: defaults)
+            let restarted = makeService(role: .mac, defaults: defaults)
             await restarted.unpair()
             expect(CompanionCloudStore.pair?["state"] as? String == "revoked", "Cancel the own pending offer after restart")
             expect(restarted.pairingCode == nil && restarted.errorMessage == nil, "Clear the cancelled pairing code")
@@ -118,25 +128,27 @@ struct UnpairTests {
         try await withDefaults { defaults in
             _ = try await makeOffer(defaults)
             CompanionCloudStore.account = "different-account"
-            let service = CompanionService(role: .mac, defaults: defaults)
+            let service = makeService(role: .mac, defaults: defaults)
             await service.unpair()
             expect(CompanionCloudStore.saveCount == 0, "An offer from another account must not authorize a cloud mutation")
             expect(service.errorMessage != nil && service.pairingCode != nil, "An account mismatch must retain the pending offer locally")
         }
 
-        for changed in ["pair ID", "Mac ID", "Mac key", "code", "expiry"] {
+        for changed in ["pair ID", "Mac ID", "Mac key", "authentication", "expiry"] {
             try await withDefaults { defaults in
                 let record = try await makeOffer(defaults)
-                let offer = try CompanionProtocol.decode(CompanionPairingOffer.self, from: record["offer"] as! Data)
+                let authenticated = try CompanionProtocol.decode(CompanionAuthenticatedOffer.self, from: record["offer"] as! Data)
+                let offer = authenticated.offer
                 let cloudMac = CompanionDevice(id: changed == "Mac ID" ? "other-mac" : offer.mac.id,
                     name: offer.mac.name, role: .mac,
                     publicKey: changed == "Mac key" ? Data("other-key".utf8) : offer.mac.publicKey)
                 let changedOffer = CompanionPairingOffer(pairID: changed == "pair ID" ? "new-pair" : offer.pairID,
-                    mac: cloudMac, codeDigest: changed == "code" ? Data("other-code".utf8) : offer.codeDigest,
+                    mac: cloudMac,
                     expiresAt: changed == "expiry" ? offer.expiresAt.addingTimeInterval(1) : offer.expiresAt)
                 record["pairID"] = changedOffer.pairID
-                record["offer"] = try CompanionProtocol.encode(changedOffer)
-                await CompanionService(role: .mac, defaults: defaults).unpair()
+                record["offer"] = try CompanionProtocol.encode(CompanionAuthenticatedOffer(offer: changedOffer,
+                    authentication: changed == "authentication" ? Data("invalid".utf8) : authenticated.authentication))
+                await makeService(role: .mac, defaults: defaults).unpair()
                 expect(CompanionCloudStore.saveCount == 0, "Cancel must not revoke a different offer: \(changed)")
                 expect(CompanionCloudStore.pair?["state"] as? String == "offered", "Keep the unrelated offer")
             }
@@ -146,7 +158,7 @@ struct UnpairTests {
             try await withDefaults { defaults in
                 let record = try await makeOffer(defaults)
                 try claimOffer(record, defaults: defaults, validProof: validProof)
-                let service = CompanionService(role: .mac, defaults: defaults)
+                let service = makeService(role: .mac, defaults: defaults)
                 await service.unpair()
                 expect(CompanionCloudStore.saveCount == (validProof ? 1 : 0),
                        "A just-claimed own offer requires a valid receipt before revocation")
@@ -161,7 +173,7 @@ struct UnpairTests {
                 CompanionCloudStore.pair = try pairRecord(pairID: "new-pair")
                 throw CKError(.serverRecordChanged)
             }
-            let service = CompanionService(role: .phone, defaults: defaults)
+            let service = makeService(role: .phone, defaults: defaults)
             await service.unpair()
             expect(service.hasLocalPairing && service.errorMessage != nil, "A save conflict must preserve retry state")
             expect(CompanionCloudStore.pair?["pairID"] as? String == "new-pair", "A conditional conflict must keep the new pair")
@@ -174,6 +186,8 @@ struct UnpairTests {
         try await checkRefreshRace(changeAccount: false)
         try await checkRefreshRace(changeAccount: true)
         try await checkOfferRefreshRace()
+        try await checkApprovalPolicy()
+        try await checkAuthenticatedEnrollment()
         print("Companion unpair checks passed: pair/key ownership, scoped subscriptions, pending offers, claimed offers, conflicts, refresh races, and account changes")
     }
 
@@ -191,7 +205,7 @@ struct UnpairTests {
             let record = try pairRecord()
             record["state"] = "revoked"
             CompanionCloudStore.pair = record
-            let service = CompanionService(role: .phone, defaults: defaults)
+            let service = makeService(role: .phone, defaults: defaults)
             var resume: CheckedContinuation<Void, Never>?
             CompanionCloudStore.beforeRecord = { await withCheckedContinuation { resume = $0 } }
             let refresh = Task { await service.refresh() }
@@ -213,7 +227,7 @@ struct UnpairTests {
         try await withDefaults { defaults in
             let record = try await makeOffer(defaults)
             try claimOffer(record, defaults: defaults)
-            let service = CompanionService(role: .mac, defaults: defaults)
+            let service = makeService(role: .mac, defaults: defaults)
             var resume: CheckedContinuation<Void, Never>?
             CompanionCloudStore.beforeRecord = { await withCheckedContinuation { resume = $0 } }
             let refresh = Task { await service.refresh() }

@@ -1,4 +1,5 @@
 import Darwin
+import CoreFoundation
 import Foundation
 import OSLog
 
@@ -41,10 +42,21 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
         self.onExpired = onExpired
     }
 
-    func recover() async throws {
+    func recover(requireEnabled: Bool = false) async throws {
         try await perform {
-            guard self.active == nil else { throw CocoaError(.fileWriteUnknown) }
-            try PreferenceGuardStore(directory: self.directory, suite: self.suite).withLock { try $0.restore() }
+            if let active = self.active {
+                guard active.expired, !active.process.isRunning else { throw CocoaError(.fileWriteUnknown) }
+                try PreferenceGuardStore(directory: self.directory, suite: self.suite).withLock { try $0.restore() }
+                // Recovery may finish before the monitor receives output EOF.
+                // Complete its waiter before taking ownership away from it.
+                active.ending?.resume(throwing: CocoaError(.userCancelled))
+                active.ending = nil
+                self.active = nil
+                return
+            }
+            try PreferenceGuardStore(directory: self.directory, suite: self.suite).withLock {
+                if requireEnabled || $0.hasPendingRecovery { try $0.restore() }
+            }
         }
     }
 
@@ -66,19 +78,21 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
             try? output.fileHandleForWriting.close()
             let session = Session(id: id, process: process,
                 input: input.fileHandleForWriting, output: output.fileHandleForReading, exited: exited)
+            active = session
             do {
                 guard try PreferenceGuardIO.readLine(from: session.output, deadline: .now() + 4) == "READY" else {
                     throw CocoaError(.executableRuntimeMismatch)
                 }
             } catch {
                 PreferenceGuardDiagnostics.failure("startup-handshake", error)
+                expire(session)
                 try? session.input.close()
-                // Never kill the guard: a failed startup may still need to restore its journal.
-                _ = exited.wait(timeout: .now() + 6)
+                let didExit = exited.wait(timeout: .now() + 6) == .success
                 try? session.output.close()
+                try restoreAfterFailure(session, didExit: didExit)
+                active = nil
                 throw error
             }
-            active = session
             expiredID = nil
             DispatchQueue.global(qos: .userInitiated).async { [self] in monitor(session) }
         }
@@ -89,6 +103,10 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
             queue.async { [self] in
                 guard let session = active, session.id == id else {
                     continuation.resume(throwing: CocoaError(expiredID == id ? .userCancelled : .fileWriteUnknown))
+                    return
+                }
+                guard !session.expired else {
+                    continuation.resume(throwing: CocoaError(.userCancelled))
                     return
                 }
                 guard session.ending == nil else {
@@ -123,10 +141,13 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
             try? session.input.close()
             if !succeeded {
                 expire(session)
-                // A killed guard cannot restore its journal. Keep this request failed,
-                // and take the same lock before restoring in case the guard is still alive.
-                try? PreferenceGuardDiagnostics.check("parent-recovery") {
-                    try PreferenceGuardStore(directory: directory, suite: suite).withLock { try $0.restore() }
+                do { try restoreAfterFailure(session, didExit: didExit) }
+                catch {
+                    PreferenceGuardDiagnostics.failure("parent-recovery", error)
+                    session.ending?.resume(throwing: error)
+                    session.ending = nil
+                    // Retain the failed session so later operations cannot skip recovery.
+                    return
                 }
             }
             active = nil
@@ -134,6 +155,18 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
             else { session.ending?.resume() }
             session.ending = nil
         }
+    }
+
+    private func restoreAfterFailure(_ session: Session, didExit: Bool) throws {
+        if !didExit {
+            // The child had time to restore itself. Stop a stuck child before repair,
+            // so it cannot disable protection again after the parent restores it.
+            if session.process.isRunning { kill(session.process.processIdentifier, SIGKILL) }
+            guard session.exited.wait(timeout: .now() + 2) == .success else {
+                throw CocoaError(.executableRuntimeMismatch)
+            }
+        }
+        try PreferenceGuardStore(directory: directory, suite: suite).withLock { try $0.restore() }
     }
 
     private func expire(_ session: Session) {
@@ -160,9 +193,9 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
         let directory = URL(fileURLWithPath: arguments[2], isDirectory: true)
         do {
             try PreferenceGuardStore(directory: directory, suite: arguments[4]).withLock { store in
-                try PreferenceGuardDiagnostics.check("recover-previous") { try store.restore() }
+                try PreferenceGuardDiagnostics.check("enable-protection") { try store.restore() }
                 guard PreferenceGuardIO.parentIsConnected() else { return }
-                try PreferenceGuardDiagnostics.check("snapshot") { try store.saveSnapshot() }
+                try PreferenceGuardDiagnostics.check("recovery-marker") { try store.markPendingRecovery() }
                 let deadline = DispatchTime.now() + 1
                 do {
                     guard PreferenceGuardIO.parentIsConnected() else { throw CocoaError(.userCancelled) }
@@ -171,7 +204,7 @@ final class TouchIDPreferenceWindow: @unchecked Sendable {
                     try PreferenceGuardIO.send("READY")
                     let expired = try PreferenceGuardIO.waitForClose(deadline: deadline)
                     if expired { try? PreferenceGuardIO.send("EXPIRED") }
-                    try PreferenceGuardDiagnostics.check("restore-original") { try store.restore() }
+                    try PreferenceGuardDiagnostics.check("restore-enabled") { try store.restore() }
                     try? PreferenceGuardIO.send("RESTORED")
                 } catch {
                     // A broken output pipe means the parent died; restoration must still finish.
@@ -264,11 +297,6 @@ private enum PreferenceGuardIO {
 }
 
 private struct PreferenceGuardStore {
-    private struct Snapshot: Codable {
-        let wasPresent: Bool
-        let value: Bool
-    }
-
     let directory: URL
     let suite: String
     private var journal: URL { directory.appendingPathComponent("approval-preference.json") }
@@ -287,67 +315,64 @@ private struct PreferenceGuardStore {
         try work(self)
     }
 
-    func saveSnapshot() throws {
-        try JSONEncoder().encode(read()).write(to: journal, options: .atomic)
+    var hasPendingRecovery: Bool {
+        var info = stat()
+        return lstat(journal.path, &info) == 0 || errno != ENOENT
+    }
+
+    func markPendingRecovery() throws {
+        try Data().write(to: journal, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: journal.path)
     }
 
     func restore() throws {
-        guard FileManager.default.fileExists(atPath: journal.path) else { return }
-        let snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: journal))
-        if snapshot.wasPresent { try write(snapshot.value) }
-        else {
-            _ = try run(["delete", suite, "TouchIDToAutoFill"])
-            guard !(try read()).wasPresent else { throw CocoaError(.fileWriteUnknown) }
+        // Recovery has one target: protection enabled. Never derive a permission
+        // to disable it from a same-user writable file, even a valid-looking JSON file.
+        try write(true)
+        if unlink(journal.path) != 0, errno != ENOENT {
+            throw CocoaError(.fileWriteUnknown)
         }
-        try FileManager.default.removeItem(at: journal)
     }
 
-    private func read() throws -> Snapshot {
-        let result = try run(["read", suite, "TouchIDToAutoFill"])
-        if result.status == 0 {
-            guard ["0", "1"].contains(result.output) else { throw CocoaError(.propertyListReadCorrupt) }
-            return Snapshot(wasPresent: true, value: result.output == "1")
+    private func read() throws -> Bool? {
+        guard CFPreferencesSynchronize(suite as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
+            throw CocoaError(.fileReadUnknown)
+        }
+        var cached: Bool?
+        if let value = CFPreferencesCopyValue("TouchIDToAutoFill" as CFString, suite as CFString,
+                                              kCFPreferencesCurrentUser, kCFPreferencesAnyHost) {
+            guard CFGetTypeID(value) == CFBooleanGetTypeID() else { throw CocoaError(.propertyListReadCorrupt) }
+            cached = (value as! NSNumber).boolValue
         }
         let path = URL(fileURLWithPath: suite + ".plist")
+        var persisted: Bool?
         do {
             // fileExists can return false for denied metadata access. Only a real missing
             // file or a readable plist without this key can establish an absent value.
             let value = try PropertyListSerialization.propertyList(from: Data(contentsOf: path), format: nil)
-            guard let dictionary = value as? [String: Any], dictionary["TouchIDToAutoFill"] == nil else { throw CocoaError(.fileReadUnknown) }
+            guard let dictionary = value as? [String: Any] else { throw CocoaError(.propertyListReadCorrupt) }
+            if let entry = dictionary["TouchIDToAutoFill"] {
+                guard CFGetTypeID(entry as CFTypeRef) == CFBooleanGetTypeID(),
+                      let number = entry as? NSNumber else { throw CocoaError(.propertyListReadCorrupt) }
+                persisted = number.boolValue
+            }
         } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
-            return Snapshot(wasPresent: false, value: true)
+            persisted = nil
         }
-        return Snapshot(wasPresent: false, value: true)
+        guard cached == persisted else { throw CocoaError(.fileReadUnknown) }
+        return persisted
     }
 
     func write(_ value: Bool) throws {
-        let status = try run(["write", suite, "TouchIDToAutoFill", "-bool", value ? "YES" : "NO"]).status
-        guard status == 0 else {
-            PreferenceGuardDiagnostics.logger.error("defaults write failed: status=\(status)")
+        // Keep the writer in the guarded process. A separately launched defaults
+        // process could survive guard termination and write after parent recovery.
+        CFPreferencesSetValue("TouchIDToAutoFill" as CFString, value ? kCFBooleanTrue : kCFBooleanFalse,
+                              suite as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+        // A failed synchronize can still leave the new value in the local cache.
+        // Check persistence before accepting any read-back as success.
+        guard CFPreferencesSynchronize(suite as CFString, kCFPreferencesCurrentUser, kCFPreferencesAnyHost) else {
             throw CocoaError(.fileWriteUnknown)
         }
-        let result = try read()
-        guard result.wasPresent, result.value == value else { throw CocoaError(.fileWriteUnknown) }
-    }
-
-    private func run(_ arguments: [String]) throws -> (status: Int32, output: String) {
-        let process = Process(), output = Pipe()
-        let exited = DispatchSemaphore(value: 0)
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        process.arguments = arguments
-        process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
-        process.terminationHandler = { _ in exited.signal() }
-        try process.run()
-        guard exited.wait(timeout: .now() + 0.5) == .success else {
-            let operation = arguments.first ?? "unknown"
-            PreferenceGuardDiagnostics.logger.error("defaults \(operation, privacy: .public) timed out")
-            kill(process.processIdentifier, SIGKILL)
-            process.waitUntilExit()
-            throw CocoaError(.executableRuntimeMismatch)
-        }
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        return (process.terminationStatus, String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))
+        guard try read() == value else { throw CocoaError(.fileWriteUnknown) }
     }
 }

@@ -65,10 +65,25 @@ enum CompanionError: LocalizedError, Sendable {
 }
 
 struct CompanionPairingOffer: Codable, Sendable {
+    let purpose: String
+    let version: Int
     let pairID: String
     let mac: CompanionDevice
-    let codeDigest: Data
     let expiresAt: Date
+
+    init(pairID: String, mac: CompanionDevice, expiresAt: Date,
+         purpose: String = "io.zats.Passtrami.pairing-offer", version: Int = 1) {
+        self.purpose = purpose
+        self.version = version
+        self.pairID = pairID
+        self.mac = mac
+        self.expiresAt = expiresAt
+    }
+}
+
+struct CompanionAuthenticatedOffer: Codable, Sendable {
+    let offer: CompanionPairingOffer
+    let authentication: Data
 }
 
 struct CompanionPairingReceipt: Codable, Sendable {
@@ -141,7 +156,29 @@ enum CompanionProtocol {
         return normalized
     }
 
-    static func digest(code: String) -> Data { Data(SHA256.hash(data: Data(code.utf8))) }
+    static func authenticateOffer(_ offer: CompanionPairingOffer, code: String) throws -> CompanionAuthenticatedOffer {
+        CompanionAuthenticatedOffer(offer: offer, authentication: Data(HMAC<SHA256>.authenticationCode(
+            for: try encode(offer), using: SymmetricKey(data: Data(code.utf8)))))
+    }
+
+    static func verifyOffer(_ authenticated: CompanionAuthenticatedOffer, code: String, now: Date) throws -> CompanionPairingOffer {
+        let offer = try verifyOfferAuthentication(authenticated, code: code)
+        guard offer.expiresAt > now else {
+            throw CompanionError.message("The pairing code has expired. Create a new code on your Mac.")
+        }
+        return offer
+    }
+
+    static func verifyOfferAuthentication(_ authenticated: CompanionAuthenticatedOffer, code: String) throws -> CompanionPairingOffer {
+        let offer = authenticated.offer
+        guard offer.purpose == "io.zats.Passtrami.pairing-offer", offer.version == 1,
+              offer.mac.role == .mac, !offer.mac.id.isEmpty, !offer.pairID.isEmpty,
+              HMAC<SHA256>.isValidAuthenticationCode(authenticated.authentication,
+                authenticating: try encode(offer), using: SymmetricKey(data: Data(code.utf8))) else {
+            throw CompanionError.message("The pairing code could not be verified. Create a new code on your Mac.")
+        }
+        return offer
+    }
 
     static func pairingProof(code: String, receipt: CompanionPairingReceipt) throws -> Data {
         Data(HMAC<SHA256>.authenticationCode(for: try encode(receipt), using: SymmetricKey(data: Data(code.utf8))))

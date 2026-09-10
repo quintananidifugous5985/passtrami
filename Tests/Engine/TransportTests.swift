@@ -233,6 +233,120 @@ private func runUnixTransportTests() async throws {
     _ = try await shutdown.response()
 }
 
+@MainActor
+private func runUnixTransportLimitTests() async throws {
+    let directory = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("passtrami-cli-limits-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let path = directory.appendingPathComponent("cli.sock").path
+    var requests: [String] = []
+    var finished: [(String, Bool)] = []
+    var cancelled: [String] = []
+    let listener = try CLIListener(path: path, connectionLimit: 2, requestTimeout: .milliseconds(400),
+        replyTimeout: .milliseconds(150), onRequest: { id, _ in requests.append(id) },
+        onDisconnect: { cancelled.append($0) }, onFinish: { finished.append(($0, $1)) })
+    defer { listener.close() }
+
+    let partial = try TransportTestClient(path: path)
+    defer { partial.close() }
+    let started = ContinuousClock.now
+    try await partial.write(Data("{".utf8))
+    try await Task.sleep(for: .milliseconds(250))
+    try await partial.write(Data("}".utf8))
+    try engineExpect(try await partial.response().isEmpty, "An incomplete command was not closed.")
+    try engineExpect(ContinuousClock.now - started < .milliseconds(600) && requests.isEmpty,
+                     "More input restarted the complete-command deadline.")
+
+    let first = try TransportTestClient(path: path), second = try TransportTestClient(path: path)
+    defer { first.close(); second.close() }
+    try await first.write(Data("{}\n".utf8))
+    try await second.write(Data("{}\n".utf8))
+    try await transportWait("The valid pending commands were not accepted.") { requests.count == 2 }
+    let overflow = try TransportTestClient(path: path)
+    defer { overflow.close() }
+    let overflowStart = ContinuousClock.now
+    try engineExpect(try await overflow.response().isEmpty, "An excess CLI connection was not rejected.")
+    try engineExpect(ContinuousClock.now - overflowStart < .milliseconds(250), "CLI overload rejection was delayed.")
+    try await Task.sleep(for: .milliseconds(500))
+    for id in requests { listener.reply(id: id, json: "{\"ok\":true}") }
+    let response = Data("{\"ok\":true}\n".utf8)
+    let firstResponse = try await first.response(), secondResponse = try await second.response()
+    try engineExpect(firstResponse == response && secondResponse == response,
+                     "The short transport timeout interrupted a complete request waiting for approval.")
+    try engineExpect(cancelled.isEmpty, "A valid pending command was cancelled by the idle deadline.")
+
+    let stalled = try TransportTestClient(path: path)
+    defer { stalled.close() }
+    var receiveSize: Int32 = 4_096
+    try engineExpect(setsockopt(stalled.descriptor, SOL_SOCKET, SO_RCVBUF, &receiveSize,
+                               socklen_t(MemoryLayout<Int32>.size)) == 0, "Could not bound the test receive buffer.")
+    try await stalled.write(Data("{}\n".utf8))
+    try await transportWait("A freed CLI slot was not reused.") { requests.count == 3 }
+    let stalledID = requests[2]
+    let payload = String(repeating: "x", count: 2_097_152)
+    listener.reply(id: stalledID, json: payload)
+    try await transportWait("A stalled reply retained its connection.") { finished.contains { $0.0 == stalledID && !$0.1 } }
+    try engineExpect(try await stalled.response().count < payload.utf8.count,
+                     "The stalled-reader fixture unexpectedly read the complete reply.")
+    try engineExpect(finished.filter { $0.0 == stalledID }.count == 1,
+                     "Stalled reply cancellation emitted duplicate completion callbacks.")
+
+    let final = try TransportTestClient(path: path)
+    defer { final.close() }
+    try await final.write(Data("{}\n".utf8))
+    try await transportWait("The listener did not recover after a stalled reply.") { requests.count == 4 }
+    listener.reply(id: requests[3], json: "{\"ok\":true}")
+    try engineExpect(try await final.response() == response, "CLI did not recover after transport limits.")
+}
+
+@MainActor
+private func runUnixDescriptorRecoveryTests() async throws {
+    let directory = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("passtrami-cli-fds-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    for closeDuringRetry in [false, true] {
+        let path = directory.appendingPathComponent("\(closeDuringRetry).sock").path
+        var requests: [(String, String)] = []
+        let listener = try CLIListener(path: path, onRequest: { requests.append(($0, $1)) }, onDisconnect: { _ in })
+        defer { listener.close() }
+        let client = try TransportTestClient(path: path)
+        defer { client.close() }
+        var original = rlimit()
+        try engineExpect(getrlimit(RLIMIT_NOFILE, &original) == 0, "Could not read the test descriptor limit.")
+        // This affects only the isolated test process. Existing descriptors stay
+        // valid, but accept cannot allocate one even if another test source closes.
+        var limited = rlimit(rlim_cur: 0, rlim_max: original.rlim_max)
+        try engineExpect(setrlimit(RLIMIT_NOFILE, &limited) == 0, "Could not set the isolated test descriptor limit.")
+        defer { _ = setrlimit(RLIMIT_NOFILE, &original) }
+        try await client.write(Data("{}\n".utf8))
+        try await Task.sleep(for: .milliseconds(150))
+        try engineExpect(FileManager.default.fileExists(atPath: path) && requests.isEmpty,
+                         "Descriptor exhaustion removed the listener or accepted an impossible descriptor.")
+        if closeDuringRetry { listener.close() }
+        try engineExpect(setrlimit(RLIMIT_NOFILE, &original) == 0, "Could not restore the descriptor limit.")
+        if closeDuringRetry {
+            try await Task.sleep(for: .milliseconds(150))
+            try engineExpect(!FileManager.default.fileExists(atPath: path) && requests.isEmpty,
+                             "A pending retry restarted the closed listener.")
+        } else {
+            // Resource exhaustion may reject an incoming connection. New clients
+            // must work when capacity returns, without replacing the listener.
+            client.close()
+            let recovered = try TransportTestClient(path: path)
+            defer { recovered.close() }
+            let command = "{\"op\":\"recovered\"}"
+            try await recovered.write(Data((command + "\n").utf8))
+            try await transportWait("The listener did not resume after descriptors became available.") {
+                requests.contains { $0.1 == command }
+            }
+            listener.reply(id: requests.first { $0.1 == command }!.0, json: "{\"ok\":true}")
+            try engineExpect(try await recovered.response() == Data("{\"ok\":true}\n".utf8),
+                             "A new command failed after descriptor recovery.")
+        }
+    }
+    print("CLI command/reply deadlines, connection cap, and descriptor recovery checks passed.")
+}
+
 private func transportWebSocketMessage(_ task: URLSessionWebSocketTask) async throws -> URLSessionWebSocketTask.Message {
     try await withThrowingTaskGroup(of: URLSessionWebSocketTask.Message.self) { group in
         group.addTask { try await task.receive() }
@@ -447,6 +561,8 @@ private func runBridgeAuthenticationTransportTests() async throws {
 func runTransportTests() async throws {
     try runEngineInstanceLockTests()
     try await runUnixTransportTests()
+    try await runUnixTransportLimitTests()
+    try await runUnixDescriptorRecoveryTests()
     try await runWebSocketTransportTests()
     try await runBridgeAuthenticationTransportTests()
     print("Native engine ownership, CLI, and WebSocket transport checks passed.")

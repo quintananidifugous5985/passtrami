@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 @MainActor
@@ -6,6 +7,7 @@ final class BrowserSession {
     private let directory: URL
     private let onExit: @MainActor () -> Void
     private var child: EngineChildProcess?
+    private var debugger: BrowserDebugPipe?
     private var stopping: Task<Void, Never>?
     private var ready = false
 
@@ -53,19 +55,21 @@ final class BrowserSession {
                 "password_manager_enabled": false
             ], to: defaultProfile.appendingPathComponent("Preferences"))
             try checkCancellation()
+            let debugger = try BrowserDebugPipe { [weak session] in session?.child?.beginStop() }
+            session.debugger = debugger
             session.child = try EngineChildProcess(executable: executable, arguments: [
-                "--user-data-dir=\(profile.path)", "--remote-debugging-port=0", "--enable-unsafe-extension-debugging",
+                "--user-data-dir=\(profile.path)", "--remote-debugging-pipe", "--enable-unsafe-extension-debugging",
                 "--headless=new", "--use-mock-keychain",
                 "--disable-features=DialMediaRouteProvider,NativeNotifications,MacAppCodeSignClone",
                 "--no-first-run", "--no-default-browser-check", "--disable-notifications",
                 "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows"
-            ]) { [weak session] in
+            ], inheritedDescriptors: [3: debugger.childInput, 4: debugger.childOutput]) { [weak session] in
                 guard let session, session.ready, session.stopping == nil else { return }
                 session.onExit()
             }
+            debugger.closeChildEnds()
             try await withTaskCancellationHandler {
-                let endpoint = try await session.debuggerEndpoint(profile: profile)
-                try await loadExtension(at: appleExtension, endpoint: endpoint)
+                try await debugger.loadExtension(at: appleExtension)
                 try checkCancellation()
                 guard session.child?.isRunning == true else {
                     throw EngineFailure("browser_start", "Chromium stopped during startup.")
@@ -86,6 +90,8 @@ final class BrowserSession {
         if let stopping { await stopping.value; return }
         ready = false
         let cleanup = Task { @MainActor in
+            debugger?.close()
+            debugger = nil
             await child?.stop()
             child = nil
             try? FileManager.default.removeItem(at: directory)
@@ -118,67 +124,178 @@ final class BrowserSession {
         try output.write(contentsOf: JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
     }
 
-    private func debuggerEndpoint(profile: URL) async throws -> URL {
-        for _ in 0..<100 {
-            try Self.checkCancellation()
-            guard child?.isRunning == true else { throw EngineFailure("browser_start", "Chromium did not start.") }
-            if let text = try? String(contentsOf: profile.appendingPathComponent("DevToolsActivePort"), encoding: .utf8) {
-                let lines = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n")
-                if lines.count >= 2, let port = UInt16(lines[0]), port > 0,
-                   lines[1].hasPrefix("/devtools/browser/"),
-                   let url = URL(string: "ws://127.0.0.1:\(port)\(lines[1])") { return url }
-            }
-            try await Task.sleep(for: .milliseconds(100))
+}
+
+// Chromium 152 uses child fd 3 for commands and fd 4 for replies. With no pipe
+// mode argument, each CDP JSON message ends in NUL (DevToolsPipeHandler ASCIIZ).
+@MainActor
+final class BrowserDebugPipe {
+    private static let maximumMessageSize = 1_048_576
+    private let commandRead: FileHandle
+    private let commandWrite: FileHandle
+    private let replyRead: FileHandle
+    private let replyWrite: FileHandle
+    private let reader: any DispatchSourceRead
+    private var writer: (any DispatchSourceWrite)?
+    private let onFailure: @MainActor () -> Void
+    private var incoming = Data()
+    private var outgoing = Data()
+    private var writeOffset = 0
+    private var completion: CheckedContinuation<Void, any Error>?
+    private var deadline: Task<Void, Never>?
+    private var requested = false
+    private var closed = false
+
+    var childInput: Int32 { commandRead.fileDescriptor }
+    var childOutput: Int32 { replyWrite.fileDescriptor }
+
+    init(onFailure: @escaping @MainActor () -> Void) throws {
+        var commands = [Int32](repeating: -1, count: 2)
+        var replies = [Int32](repeating: -1, count: 2)
+        guard pipe(&commands) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        guard pipe(&replies) == 0 else {
+            let error = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+            for descriptor in commands { Darwin.close(descriptor) }
+            throw error
         }
-        throw EngineFailure("browser_start", "Chromium did not start.")
+        do {
+            for descriptor in commands + replies {
+                guard fcntl(descriptor, F_SETFD, FD_CLOEXEC) >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            }
+            for descriptor in [commands[1], replies[0]] {
+                let flags = fcntl(descriptor, F_GETFL)
+                guard flags >= 0, fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) >= 0 else {
+                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                }
+            }
+            guard fcntl(commands[1], F_SETNOSIGPIPE, 1) >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        } catch {
+            for descriptor in commands + replies { Darwin.close(descriptor) }
+            throw error
+        }
+        commandRead = FileHandle(fileDescriptor: commands[0], closeOnDealloc: true)
+        commandWrite = FileHandle(fileDescriptor: commands[1], closeOnDealloc: true)
+        replyRead = FileHandle(fileDescriptor: replies[0], closeOnDealloc: true)
+        replyWrite = FileHandle(fileDescriptor: replies[1], closeOnDealloc: true)
+        reader = DispatchSource.makeReadSource(fileDescriptor: replies[0], queue: .main)
+        self.onFailure = onFailure
+        reader.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.receive() } }
+        reader.resume()
     }
 
-    private static func loadExtension(at extensionURL: URL, endpoint: URL) async throws {
-        let configuration = URLSessionConfiguration.ephemeral
-        let connection = URLSession(configuration: configuration)
-        let socket = connection.webSocketTask(with: endpoint)
-        socket.resume()
-        defer {
-            socket.cancel(with: .goingAway, reason: nil)
-            connection.invalidateAndCancel()
-        }
-        let command = try JSONSerialization.data(withJSONObject: [
-            "id": 1, "method": "Extensions.loadUnpacked", "params": ["path": extensionURL.path]
+    func closeChildEnds() {
+        try? commandRead.close()
+        try? replyWrite.close()
+    }
+
+    func loadExtension(at url: URL, timeout: Duration = .seconds(15)) async throws {
+        guard !closed, !requested else { throw EngineFailure("browser_connection", "Chromium's command pipe is unavailable.") }
+        try Task.checkCancellation()
+        var command = try JSONSerialization.data(withJSONObject: [
+            "id": 1, "method": "Extensions.loadUnpacked", "params": ["path": url.path]
         ])
-        var timedOut = false
-        let deadline = Task { @MainActor in
-            do { try await Task.sleep(for: .seconds(15)) } catch { return }
-            timedOut = true
-            socket.cancel(with: .goingAway, reason: nil)
+        guard command.count <= Self.maximumMessageSize else { throw EngineFailure("extension_start", "The extension path is too long.") }
+        command.append(0)
+        requested = true
+        outgoing = command
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                completion = continuation
+                deadline = Task { @MainActor [weak self] in
+                    do { try await Task.sleep(for: timeout) } catch { return }
+                    self?.fail(EngineFailure("extension_start", "The password extension did not load."))
+                }
+                let writer = DispatchSource.makeWriteSource(fileDescriptor: commandWrite.fileDescriptor, queue: .main)
+                self.writer = writer
+                writer.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.send() } }
+                writer.resume()
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.fail(EngineFailure("cancelled", "Browser startup was cancelled.")) }
         }
-        defer { deadline.cancel() }
-        do {
-            try await withTaskCancellationHandler {
-                try await socket.send(.string(String(decoding: command, as: UTF8.self)))
-                while true {
-                    let message = try await socket.receive()
-                    let data: Data
-                    switch message {
-                    case .data(let value): data = value
-                    case .string(let value): data = Data(value.utf8)
-                    @unknown default: throw EngineFailure("browser_connection", "Chromium sent an invalid response.")
-                    }
-                    guard let response = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                        throw EngineFailure("browser_connection", "Chromium sent an invalid response.")
-                    }
-                    if response["id"] as? Int == 1 {
-                        if response["error"] != nil {
-                            throw EngineFailure("extension_start", "The password extension could not be loaded.")
-                        }
+    }
+
+    func close() {
+        guard !closed else { return }
+        closed = true
+        reader.cancel()
+        writer?.cancel()
+        writer = nil
+        closeChildEnds()
+        try? commandWrite.close()
+        try? replyRead.close()
+        incoming.removeAll()
+        outgoing.removeAll()
+        finish(EngineFailure("browser_connection", "Chromium's command pipe closed."))
+    }
+
+    private func finish(_ error: (any Error)? = nil) {
+        deadline?.cancel()
+        deadline = nil
+        let continuation = completion
+        completion = nil
+        if let error { continuation?.resume(throwing: error) }
+        else { continuation?.resume() }
+    }
+
+    private func fail(_ error: EngineFailure) {
+        guard !closed else { return }
+        finish(error)
+        close()
+        onFailure()
+    }
+
+    private func send() {
+        guard !closed else { return }
+        while writeOffset < outgoing.count {
+            let count = outgoing.withUnsafeBytes { bytes in
+                Darwin.write(commandWrite.fileDescriptor, bytes.baseAddress!.advanced(by: writeOffset), bytes.count - writeOffset)
+            }
+            if count > 0 { writeOffset += count; continue }
+            if count < 0 && errno == EINTR { continue }
+            if count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) { return }
+            fail(EngineFailure("browser_connection", "Could not send a command to Chromium."))
+            return
+        }
+        outgoing.removeAll()
+        writer?.cancel()
+        writer = nil
+    }
+
+    private func receive() {
+        guard !closed else { return }
+        var bytes = [UInt8](repeating: 0, count: 16_384)
+        var received = 0
+        // Yield the main queue so a stream of events cannot prevent the deadline.
+        while !closed && received < 262_144 {
+            let count = Darwin.read(replyRead.fileDescriptor, &bytes, bytes.count)
+            if count < 0 && errno == EINTR { continue }
+            if count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) { return }
+            guard count > 0 else {
+                fail(EngineFailure("browser_connection", "Chromium's command pipe closed."))
+                return
+            }
+            received += count
+            incoming.append(contentsOf: bytes.prefix(count))
+            while let end = incoming.firstIndex(of: 0) {
+                guard incoming.distance(from: incoming.startIndex, to: end) <= Self.maximumMessageSize,
+                      let response = try? JSONSerialization.jsonObject(with: incoming[..<end]) as? [String: Any] else {
+                    fail(EngineFailure("browser_connection", "Chromium sent an invalid response."))
+                    return
+                }
+                incoming.removeSubrange(...end)
+                if response["id"] as? Int == 1, completion != nil {
+                    guard response["error"] == nil, let result = response["result"] as? [String: Any], result["id"] is String else {
+                        fail(EngineFailure("extension_start", "The password extension could not be loaded."))
                         return
                     }
+                    finish()
                 }
-            } onCancel: { socket.cancel(with: .goingAway, reason: nil) }
-        } catch {
-            try checkCancellation()
-            if timedOut { throw EngineFailure("extension_start", "The password extension did not load.") }
-            if let failure = error as? EngineFailure { throw failure }
-            throw EngineFailure("browser_connection", "Could not connect to Chromium.")
+            }
+            guard incoming.count <= Self.maximumMessageSize else {
+                fail(EngineFailure("browser_connection", "Chromium sent an oversized response."))
+                return
+            }
         }
     }
 }

@@ -87,12 +87,6 @@ private func runtimeDownloadTest(status: Int = 200, body: String = "abc", hold: 
 }
 
 @MainActor
-private final class RuntimeBrowserState {
-    var server: BridgeListener?
-    var commands: [[String: Any]] = []
-}
-
-@MainActor
 private final class RuntimeDownloadTask {
     var task: Task<Void, any Error>?
 }
@@ -109,29 +103,37 @@ private func runtimeBrowserTest(mode: String) async throws {
     }
     try Data("// Fixture extension\n".utf8).write(to: resources.appendingPathComponent("AppleExtension/background.js"))
     try Data("// Fixture bridge\n".utf8).write(to: resources.appendingPathComponent("Engine/bridge.js"))
-    let state = RuntimeBrowserState()
-    let server = BridgeListener(onOpen: { _ in }, onText: { id, text in
-        if let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] {
-            state.commands.append(object)
-            if mode == "ready" { state.server?.send(id: id, text: "{\"id\":1,\"result\":{}}") }
-        }
-    }, onClose: { _ in })
-    state.server = server
-    defer { server.close(); state.server = nil }
-    let port = try await server.start()
     let quote = { (value: String) in "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     let pidFile = root.appendingPathComponent("pid")
+    let commandFile = root.appendingPathComponent("command")
+    let argumentsFile = root.appendingPathComponent("arguments")
+    let leakedFile = root.appendingPathComponent("leaked-fd")
+    let null = Darwin.open("/dev/null", O_RDWR)
+    defer { Darwin.close(null) }
+    let unrelated = fcntl(null, F_DUPFD, 80)
+    try runtimeExpect(unrelated >= 80, "Could not create an unrelated descriptor.")
+    defer { Darwin.close(unrelated) }
     let executable = root.appendingPathComponent("browser")
-    let endpoint = mode == "wait-ready" ? "" : "printf '\(port)\\n/devtools/browser/fixture\\n' > \"$profile/DevToolsActivePort\"\n"
+    let readCommand = mode == "wait-ready" ? "" : "IFS= read -r -d '' command <&3\nprintf '%s' \"$command\" > \(quote(commandFile.path))\n"
+    let response: String
+    switch mode {
+    case "ready":
+        // Exercise multiple frames and a reply split across separate writes.
+        response = "printf '{\"method\":\"fixture.event\"}\\0{\"id\":1,\"result\":' >&4\n/bin/sleep 0.02\nprintf '{\"id\":\"fixture\"}}\\0' >&4\n"
+    case "invalid": response = "printf 'invalid JSON\\0' >&4\n"
+    case "oversized": response = "/usr/bin/head -c 1048577 /dev/zero | /usr/bin/tr '\\000' x >&4\n"
+    case "error": response = "printf '{\"id\":1,\"error\":{\"code\":-1}}\\0' >&4\n"
+    case "exit": response = "exit 0\n"
+    default: response = ""
+    }
     let script = """
-    #!/bin/sh
-    for argument in "$@"; do
-      case "$argument" in --user-data-dir=*) profile=${argument#--user-data-dir=};; esac
-    done
+    #!/bin/bash
     printf '%s' "$$" > \(quote(pidFile.path))
-    \(endpoint)exec /bin/sleep 30
+    printf '%s\\n' "$@" > \(quote(argumentsFile.path))
+    if { : <&\(unrelated); } 2>/dev/null; then : > \(quote(leakedFile.path)); fi
+    \(readCommand)\(response)exec /bin/sleep 30
     """
-    try Data(script.utf8).write(to: executable)
+    try Data((mode == "spawn-error" ? "Invalid executable fixture" : script).utf8).write(to: executable)
     try manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: executable.path)
     var exits = 0
     let startup = Task {
@@ -140,12 +142,24 @@ private func runtimeBrowserTest(mode: String) async throws {
     }
     var browser: BrowserSession?
     do {
-        try await runtimeUntil { manager.fileExists(atPath: pidFile.path) }
+        if mode == "spawn-error" {
+            do {
+                _ = try await startup.value
+                throw EngineFailure("test", "An invalid executable was accepted.")
+            } catch is POSIXError { }
+            try runtimeExpect(try manager.contentsOfDirectory(atPath: data.path).isEmpty, "Spawn failure left a profile.")
+            return
+        }
+        try await runtimeUntil { (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap(Int32.init) != nil }
         let pid = Int32(try String(contentsOf: pidFile, encoding: .utf8))!
         if mode == "ready" {
             browser = try await startup.value
-            try runtimeExpect(state.commands.count == 1 && state.commands[0]["method"] as? String == "Extensions.loadUnpacked",
-                              "Browser did not send the CDP load command.")
+            let command = try JSONSerialization.jsonObject(with: Data(contentsOf: commandFile)) as! [String: Any]
+            try runtimeExpect(command["method"] as? String == "Extensions.loadUnpacked", "Browser did not send the CDP load command.")
+            let arguments = try String(contentsOf: argumentsFile, encoding: .utf8).split(separator: "\n")
+            try runtimeExpect(arguments.contains("--remote-debugging-pipe") && !arguments.contains(where: { $0.hasPrefix("--remote-debugging-port") }),
+                              "Browser did not use an exclusive debugging pipe.")
+            try runtimeExpect(!manager.fileExists(atPath: leakedFile.path), "Browser inherited an unrelated descriptor.")
             let sessions = try manager.contentsOfDirectory(at: data, includingPropertiesForKeys: nil)
             try runtimeExpect(sessions.count == 1, "Browser created extra sessions.")
             let preferences = try JSONSerialization.jsonObject(with: Data(contentsOf: sessions[0].appendingPathComponent("profile/Default/Preferences"))) as! [String: Any]
@@ -156,9 +170,13 @@ private func runtimeBrowserTest(mode: String) async throws {
             try await runtimeUntil { exits == 1 }
             await browser?.stop()
         } else {
-            if mode == "wait-cdp" { try await runtimeUntil { !state.commands.isEmpty } }
-            startup.cancel()
-            try await runtimeFailure("cancelled") { _ = try await startup.value }
+            if mode == "wait-ready" || mode == "wait-cdp" {
+                if mode == "wait-cdp" { try await runtimeUntil { ((try? Data(contentsOf: commandFile))?.count ?? 0) > 0 } }
+                startup.cancel()
+                try await runtimeFailure("cancelled") { _ = try await startup.value }
+            } else {
+                try await runtimeFailure(mode == "error" ? "extension_start" : "browser_connection") { _ = try await startup.value }
+            }
             try runtimeExpect(exits == 0, "Failed startup sent an active-session exit event.")
         }
         try runtimeExpect(Darwin.kill(pid, 0) != 0, "Browser test left a child running.")
@@ -173,6 +191,20 @@ private func runtimeBrowserTest(mode: String) async throws {
 
 @MainActor
 func runRuntimeTests() async throws {
+    let signalChild: EngineChildProcess = try {
+        let originalHandler = signal(SIGTERM, SIG_IGN)
+        defer { signal(SIGTERM, originalHandler) }
+        var blocked = sigset_t(), originalMask = sigset_t()
+        sigemptyset(&blocked)
+        sigaddset(&blocked, SIGTERM)
+        try runtimeExpect(pthread_sigmask(SIG_BLOCK, &blocked, &originalMask) == 0, "Could not set the fixture signal mask.")
+        defer { pthread_sigmask(SIG_SETMASK, &originalMask, nil) }
+        return try EngineChildProcess(executable: URL(fileURLWithPath: "/bin/sleep"), arguments: ["10"])
+    }()
+    signalChild.beginStop(grace: .milliseconds(100))
+    let signalStatus = await signalChild.wait()
+    try runtimeExpect(signalStatus.signalled && signalStatus.code == SIGTERM,
+                      "Child inherited an ignored or blocked SIGTERM and required SIGKILL.")
     let output = try await BrowserRuntime.runSystemCheck("Test check", command: "/bin/sh", arguments: ["-c", "printf '152.0.7977.82\\n'"])
     try runtimeExpect(output == "152.0.7977.82", "System check changed stdout.")
     do {
@@ -254,6 +286,13 @@ func runRuntimeTests() async throws {
     }
     try runtimeExpect(setupProgress.last?.phase == .failed && setupProgress.last?.message != nil && setupProgress.last?.appPath == nil,
                       "Setup failure did not report a separate runtime error.")
-    for mode in ["ready", "wait-ready", "wait-cdp"] { try await runtimeBrowserTest(mode: mode) }
-    print("Runtime download, process, CDP, and cleanup checks passed.")
+    for mode in ["ready", "wait-ready", "wait-cdp", "invalid", "oversized", "error", "exit", "spawn-error"] { try await runtimeBrowserTest(mode: mode) }
+    var pipeFailed = false
+    let pipe = try BrowserDebugPipe { pipeFailed = true }
+    defer { pipe.close() }
+    try await runtimeFailure("extension_start") {
+        try await pipe.loadExtension(at: URL(fileURLWithPath: "/fixture"), timeout: .milliseconds(25))
+    }
+    try runtimeExpect(pipeFailed, "A pipe startup timeout did not stop the browser.")
+    print("Runtime download, process, private CDP pipe, and cleanup checks passed.")
 }

@@ -73,7 +73,7 @@ private struct SettingsDetailView: View {
                 CommandLineSettingsSection(model: model)
                 MCPSettingsSection(model: model)
             case .devices:
-                DevicesSettingsSection(companion: companion, model: model)
+                DevicesSettingsSection(companion: companion)
             case .about:
                 AboutSettingsSection()
                 UpdatesSettingsSection(updates: updates)

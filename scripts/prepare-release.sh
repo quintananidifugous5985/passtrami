@@ -63,8 +63,8 @@ tag="v${version}b${build_number}"
 [[ "$tag" =~ '^v[0-9]+(\.[0-9]+)*b[0-9]+$' ]] || { print -u2 'Invalid version or build number.'; exit 65; }
 output="$project_root/build/Distribution/$tag"
 [[ ! -e "$output" ]] || { print -u2 "Release output already exists: $output"; exit 73; }
-tools=$(python3 scripts/sparkle-tools.py)
-[[ $("$tools/generate_keys" --account "$bundle_id" -p) == "$public_key" ]] || { print -u2 'Sparkle public key does not match the signing account.'; exit 65; }
+python3 Tests/ReleaseTools/test_sparkle_tools.py
+[[ $(python3 scripts/sparkle-tools.py generate_keys --account "$bundle_id" -p) == "$public_key" ]] || { print -u2 'Sparkle public key does not match the signing account.'; exit 65; }
 python3 scripts/prepare-extension.py
 Tests/Engine/run.sh
 Tests/Companion/run.sh
@@ -121,11 +121,11 @@ archive_name="Passtrami-${version}-b${build_number}-macOS-arm64.zip"
 archive="$assets/$archive_name"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
 cp "$notes" "$assets/${archive_name:r}.md"
-"$tools/generate_appcast" --account "$bundle_id" --maximum-deltas 0 --maximum-versions 1 \
+python3 scripts/sparkle-tools.py generate_appcast --account "$bundle_id" --maximum-deltas 0 --maximum-versions 1 \
   --embed-release-notes --download-url-prefix "https://github.com/$repository/releases/download/$tag/" \
   --link "https://github.com/$repository" -o "$assets/appcast.xml" "$assets"
 signature=$(python3 scripts/validate-appcast.py "$assets/appcast.xml" "$repository" "$tag" "$archive_name" "$(stat -f %z "$archive")")
-"$tools/sign_update" --account "$bundle_id" --verify "$archive" "$signature"
+python3 scripts/sparkle-tools.py sign_update --account "$bundle_id" --verify "$archive" "$signature"
 rm "$assets/${archive_name:r}.md"
 (cd "$assets" && shasum -a 256 "$archive_name" > "$archive_name.sha256")
 cp "$archive" "$assets/Passtrami.zip"

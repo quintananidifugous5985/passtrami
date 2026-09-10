@@ -3,26 +3,49 @@ import SwiftUI
 
 struct DevicesSettingsSection: View {
     let companion: CompanionService
-    @Bindable var model: SettingsModel
 
     var body: some View {
         Group {
             DevicePairingSection(companion: companion)
-                .onChange(of: companion.pairingID) { _, _ in
-                    model.refreshDeviceApproval()
-                }
-            if companion.hasLocalPairing {
-                Section {
-                    Toggle("Use iPhone Approval", isOn: $model.deviceApprovalEnabled)
-                        .toggleStyle(.switch)
-                } header: {
-                    Text("Approval")
-                } footer: {
-                    Text("Phone approval briefly disables Touch ID for AutoFill across this Mac.")
-                }
-            }
+            DeviceApprovalPolicySection(companion: companion)
             if companion.hasLocalPairing || !companion.pendingRequests.isEmpty || !companion.history.isEmpty {
                 DeviceApprovalHistorySection(requests: companion.pendingRequests + companion.history)
+            }
+        }
+    }
+}
+
+private struct DeviceApprovalPolicySection: View {
+    let companion: CompanionService
+
+    var body: some View {
+        Section {
+            if companion.approvalPolicyNeedsSetup {
+                LabeledContent("Password Access") {
+                    Button("Use Local Approval…") {
+                        Task { await companion.setPhoneApprovalRequired(false) }
+                    }
+                    .disabled(companion.isBusy)
+                }
+            } else {
+                Toggle("Require iPhone Approval", isOn: Binding(
+                    get: { companion.requiresPhoneApproval },
+                    set: { required in Task { await companion.setPhoneApprovalRequired(required) } }
+                ))
+                .toggleStyle(.switch)
+                .disabled(companion.isBusy || (!companion.hasLocalPairing && !companion.requiresPhoneApproval))
+            }
+        } header: {
+            Text("Approval")
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                if companion.approvalPolicyNeedsSetup {
+                    Text("Password access is blocked. Pair an iPhone or authenticate on this Mac to use local approval.")
+                } else if companion.requiresPhoneApproval, !companion.hasLocalPairing {
+                    Text("Password access is blocked. Pair an iPhone or turn off this requirement on this Mac.")
+                }
+                Text("Turning this off requires authentication on this Mac. Unpairing does not turn it off.")
+                Text("Phone approval briefly disables Touch ID for AutoFill across this Mac.")
             }
         }
     }

@@ -14,6 +14,7 @@ final class CLIListener {
         var outputOffset = 0
         var receivedRequest = false
         var replying = false
+        var deadline: Task<Void, Never>?
 
         init(_ descriptor: Int32) { self.descriptor = descriptor }
 
@@ -27,14 +28,24 @@ final class CLIListener {
     private let onRequest: @MainActor (String, String) -> Void
     private let onDisconnect: @MainActor (String) -> Void
     private let onFinish: @MainActor (String, Bool) -> Void
+    private let connectionLimit: Int
+    private let requestTimeout: Duration
+    private let replyTimeout: Duration
     private var descriptor: Int32 = -1
     private var source: DispatchSourceRead?
     private var clients: [String: Client] = [:]
+    private var acceptRetry: Task<Void, Never>?
+    private var acceptSuspended = false
 
-    init(path: String, onRequest: @escaping @MainActor (String, String) -> Void,
+    init(path: String, connectionLimit: Int = 64, requestTimeout: Duration = .seconds(5),
+         replyTimeout: Duration = .seconds(5), onRequest: @escaping @MainActor (String, String) -> Void,
          onDisconnect: @escaping @MainActor (String) -> Void,
          onFinish: @escaping @MainActor (String, Bool) -> Void = { _, _ in }) throws {
+        precondition(connectionLimit > 0 && requestTimeout > .zero && replyTimeout > .zero)
         self.path = path
+        self.connectionLimit = connectionLimit
+        self.requestTimeout = requestTimeout
+        self.replyTimeout = replyTimeout
         self.onRequest = onRequest
         self.onDisconnect = onDisconnect
         self.onFinish = onFinish
@@ -95,6 +106,9 @@ final class CLIListener {
     func close() {
         guard descriptor >= 0 else { return }
         descriptor = -1
+        acceptRetry?.cancel()
+        acceptRetry = nil
+        if acceptSuspended { source?.resume(); acceptSuspended = false }
         source?.cancel()
         source = nil
         unlink(path)
@@ -109,23 +123,53 @@ final class CLIListener {
     }
 
     private func acceptClients() {
-        while descriptor >= 0 {
+        guard !acceptSuspended else { return }
+        // Yield between bounded batches so an incoming flood cannot starve deadlines.
+        for _ in 0..<connectionLimit {
+            guard descriptor >= 0 else { return }
             let accepted = Darwin.accept(descriptor, nil, nil)
             if accepted < 0 {
                 if errno == EINTR || errno == ECONNABORTED || errno == EINVAL { continue }
-                if errno != EAGAIN && errno != EWOULDBLOCK { close() }
+                if [EMFILE, ENFILE, ENOBUFS, ENOMEM].contains(errno) { retryAccept() }
+                else if errno != EAGAIN && errno != EWOULDBLOCK { close() }
                 return
             }
+            guard clients.count < connectionLimit else { Darwin.close(accepted); continue }
             guard Self.configure(accepted) else { Darwin.close(accepted); continue }
             let id = UUID().uuidString
             let client = Client(accepted)
             clients[id] = client
+            armDeadline(id, after: requestTimeout)
             let source = DispatchSource.makeReadSource(fileDescriptor: accepted, queue: .main)
             source.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.read(id) } }
             source.setCancelHandler { MainActor.assumeIsolated { client.sourceCancelled() } }
             client.readSource = source
             client.sourceCount += 1
             source.resume()
+        }
+    }
+
+    private func retryAccept() {
+        guard !acceptSuspended else { return }
+        acceptSuspended = true
+        source?.suspend()
+        acceptRetry = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            guard !Task.isCancelled, let self, descriptor >= 0 else { return }
+            acceptRetry = nil
+            acceptSuspended = false
+            source?.resume()
+            acceptClients()
+        }
+    }
+
+    private func armDeadline(_ id: String, after timeout: Duration) {
+        guard let client = clients[id], client.deadline == nil else { return }
+        let expires = ContinuousClock.now + timeout
+        client.deadline = Task { [weak self] in
+            do { try await Task.sleep(until: expires, clock: .continuous) } catch { return }
+            guard !Task.isCancelled else { return }
+            self?.finish(id, cancelled: true)
         }
     }
 
@@ -150,6 +194,9 @@ final class CLIListener {
                     return
                 }
                 client.receivedRequest = true
+                // PIN and phone approval use the engine's request deadline.
+                client.deadline?.cancel()
+                client.deadline = nil
                 client.input.removeAll(keepingCapacity: false)
                 onRequest(id, text)
             }
@@ -162,9 +209,15 @@ final class CLIListener {
             let count = client.output.withUnsafeBytes { bytes in
                 Darwin.write(client.descriptor, bytes.baseAddress!.advanced(by: client.outputOffset), bytes.count - client.outputOffset)
             }
-            if count > 0 { client.outputOffset += count; continue }
+            if count > 0 {
+                client.outputOffset += count
+                client.deadline?.cancel()
+                client.deadline = nil
+                continue
+            }
             if count < 0, errno == EINTR { continue }
             if count < 0, errno == EAGAIN || errno == EWOULDBLOCK {
+                armDeadline(id, after: replyTimeout)
                 if client.writeSource == nil {
                     let source = DispatchSource.makeWriteSource(fileDescriptor: client.descriptor, queue: .main)
                     source.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.flush(id) } }
@@ -183,6 +236,7 @@ final class CLIListener {
 
     private func finish(_ id: String, cancelled: Bool) {
         guard let client = clients.removeValue(forKey: id) else { return }
+        client.deadline?.cancel()
         client.readSource?.cancel()
         client.writeSource?.cancel()
         client.input.removeAll(keepingCapacity: false)

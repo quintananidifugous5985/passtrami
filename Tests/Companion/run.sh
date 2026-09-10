@@ -9,7 +9,7 @@ xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   -o "$test_directory/tests"
 "$test_directory/tests"
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
-  -target arm64-apple-macos26.2 Companion/CompanionModels.swift Companion/CompanionService.swift \
-  Tests/Companion/UnpairStubs.swift Tests/Companion/UnpairTests.swift \
+  -target arm64-apple-macos26.2 Companion/CompanionModels.swift Companion/CompanionApprovalPolicyStore.swift Companion/CompanionService.swift \
+  Tests/Companion/UnpairStubs.swift Tests/Companion/UnpairTests.swift Tests/Companion/SecurityTests.swift \
   -o "$test_directory/unpair-tests"
 "$test_directory/unpair-tests"

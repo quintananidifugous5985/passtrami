@@ -3,12 +3,14 @@ import Foundation
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 if let status = TouchIDPreferenceWindow.runGuardIfRequested(arguments) { exit(status) }
-guard arguments.count == 4, arguments[0] == "--resources", arguments[2] == "--data-dir" else {
-    FileHandle.standardError.write(Data("Usage: passtrami-engine --resources <path> --data-dir <path>\n".utf8))
+guard (arguments.count == 4 || (arguments.count == 5 && arguments[4] == "--require-phone-approval")),
+      arguments[0] == "--resources", arguments[2] == "--data-dir" else {
+    FileHandle.standardError.write(Data("Usage: passtrami-engine --resources <path> --data-dir <path> [--require-phone-approval]\n".utf8))
     exit(64)
 }
 let engine = JavaScriptEngine(resources: URL(fileURLWithPath: arguments[1], isDirectory: true),
-                              dataDirectory: URL(fileURLWithPath: arguments[3], isDirectory: true))
+                              dataDirectory: URL(fileURLWithPath: arguments[3], isDirectory: true),
+                              phoneApprovalRequired: arguments.count == 5)
 Task { @MainActor in
     do { try await engine.start() }
     catch {
