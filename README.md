@@ -14,7 +14,9 @@ Passtrami builds on [APW](https://github.com/bendews/apw), with a macOS interfac
 
 ## MCP
 
-Enable MCP in **Settings → Tools**, select **Copy Configuration**, and add it to your agent’s MCP settings. See [MCP access](docs/mcp.md) for details.
+Enable MCP in **Settings → Tools**, select **Copy Configuration**, and add it to your agent’s MCP settings.
+
+Optional reading: [how MCP works](docs/mcp.md).
 
 ## Command line
 
