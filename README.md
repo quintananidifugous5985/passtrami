@@ -14,7 +14,9 @@ Passtrami builds on [APW](https://github.com/bendews/apw), with a macOS interfac
 
 ## MCP
 
-Enable MCP in **Settings → Tools**, select **Copy Configuration**, and add it to your agent’s MCP settings.
+Enable MCP in **Settings → Tools** and select **Copy Configuration**. Paste it into your coding agent and ask it to set up Passtrami MCP. That should be enough.
+
+For more setup details, see [Claude Code](https://code.claude.com/docs/en/mcp#installing-mcp-servers), [Cursor](https://cursor.com/docs/mcp#installing-mcp-servers), or [Codex](https://learn.chatgpt.com/docs/extend/mcp#connect-codex-to-an-mcp-server).
 
 Optional reading: [how MCP works](docs/mcp.md).
 
