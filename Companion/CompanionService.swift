@@ -27,7 +27,7 @@ final class CompanionService {
     private(set) var isBusy = false
 
     @ObservationIgnored private let cloud = CompanionCloudStore()
-    @ObservationIgnored private let defaults = UserDefaults.standard
+    @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let deviceID: String
     @ObservationIgnored private let signingKey: CompanionSigningKey
     @ObservationIgnored private var trust: CompanionTrust?
@@ -39,8 +39,9 @@ final class CompanionService {
     @ObservationIgnored private var remoteRefreshPending = false
     @ObservationIgnored private var subscribedPairID: String?
 
-    init(role: CompanionRole) {
+    init(role: CompanionRole, defaults: UserDefaults = .standard) {
         self.role = role
+        self.defaults = defaults
         let idKey = "companion.deviceID.\(role.rawValue)"
         let id = defaults.string(forKey: idKey) ?? UUID().uuidString
         defaults.set(id, forKey: idKey)
@@ -167,6 +168,8 @@ final class CompanionService {
             _ = try await cloud.save(record)
             defaults.set(code, forKey: "companion.offerCode")
             defaults.set(offer.expiresAt, forKey: "companion.offerExpiry")
+            defaults.set(currentAccountID, forKey: "companion.offerAccountID")
+            defaults.set(offer.pairID, forKey: "companion.offerPairID")
             showCode(code, expiresAt: offer.expiresAt)
         }
         pollSleep?.cancel()
@@ -198,17 +201,58 @@ final class CompanionService {
     }
 
     func unpair() async {
+        // Capture ownership before perform() waits for an in-flight refresh.
+        let capturedTrust = trust
+        let offerCode = defaults.string(forKey: "companion.offerCode")
+        let offerExpiry = defaults.object(forKey: "companion.offerExpiry") as? Date
+        let offerAccountID = defaults.string(forKey: "companion.offerAccountID")
+        let offerPairID = defaults.string(forKey: "companion.offerPairID")
         await perform {
             try await checkAccount()
+            let ownerAccountID = capturedTrust?.accountID ?? offerAccountID
+            guard ownerAccountID == nil || ownerAccountID == currentAccountID else {
+                throw CompanionError.accountUnavailable
+            }
             if let record = try await cloud.record(CompanionCloudStore.pairRecordID) {
-                record["state"] = "revoked"
-                _ = try await cloud.save(record)
+                var ownsRecord = false
+                if let data = record["offer"] as? Data,
+                   let offer = try? CompanionProtocol.decode(CompanionPairingOffer.self, from: data),
+                   record["pairID"] as? String == offer.pairID {
+                    if let capturedTrust, record["state"] as? String == "paired",
+                       let phoneData = record["phone"] as? Data,
+                       let phone = try? CompanionProtocol.decode(CompanionDevice.self, from: phoneData) {
+                        ownsRecord = offer.pairID == capturedTrust.pairID
+                            && offer.mac == capturedTrust.mac && phone == capturedTrust.phone
+                    } else if capturedTrust == nil, role == .mac, offerAccountID != nil, let offerCode,
+                              offer.pairID == offerPairID, offer.expiresAt == offerExpiry, offer.mac.id == deviceID,
+                              offer.codeDigest == CompanionProtocol.digest(code: offerCode) {
+                        if offer.mac.publicKey == (try signingKey.publicKey()) {
+                            if record["state"] as? String == "offered" {
+                                ownsRecord = true
+                            } else if record["state"] as? String == "paired",
+                                      let phoneData = record["phone"] as? Data,
+                                      let phone = try? CompanionProtocol.decode(CompanionDevice.self, from: phoneData),
+                                      let proof = record["proof"] as? Data {
+                                // The phone may have claimed this offer before the Mac receives the update.
+                                try CompanionProtocol.verifyPairingProof(proof, code: offerCode,
+                                    receipt: CompanionPairingReceipt(pairID: offer.pairID, mac: offer.mac, phone: phone))
+                                ownsRecord = true
+                            }
+                        }
+                    }
+                }
+                if ownsRecord {
+                    record["state"] = "revoked"
+                    _ = try await cloud.save(record)
+                }
+            }
+            if role == .phone, let capturedTrust {
+                try await cloud.removeSubscription(pairID: capturedTrust.pairID)
             }
             clearTrust()
             clearCode()
             pendingRequests = []
             history = []
-            if role == .phone { try await cloud.removeSubscriptions() }
             refreshSucceeded = true
         }
     }
@@ -500,6 +544,8 @@ final class CompanionService {
         pairingExpiresAt = nil
         defaults.removeObject(forKey: "companion.offerCode")
         defaults.removeObject(forKey: "companion.offerExpiry")
+        defaults.removeObject(forKey: "companion.offerAccountID")
+        defaults.removeObject(forKey: "companion.offerPairID")
     }
 
     private func perform(_ operation: () async throws -> Void) async {

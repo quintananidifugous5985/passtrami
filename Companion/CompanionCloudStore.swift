@@ -21,6 +21,7 @@ final class CompanionCloudStore {
     }
 
     static func requestID(_ id: String) -> CKRecord.ID { CKRecord.ID(recordName: id, zoneID: zoneID) }
+    static func phoneSubscriptionID(pairID: String) -> String { "phone-approvals-\(pairID)" }
 
     func prepareZone(accountID: String) async throws {
         guard preparedAccount != accountID else { return }
@@ -115,8 +116,13 @@ final class CompanionCloudStore {
     }
 
     func subscribe(pairID: String) async throws {
-        let subscriptionID = "phone-approvals-\(pairID)"
-        let existing = try await database.allSubscriptions()
+        try await Self.savePhoneSubscription(pairID: pairID) { subscription in
+            _ = try await database.save(subscription)
+        }
+    }
+
+    static func savePhoneSubscription(pairID: String, save: (CKSubscription) async throws -> Void) async throws {
+        let subscriptionID = Self.phoneSubscriptionID(pairID: pairID)
         let query = CKQuerySubscription(recordType: Self.requestRecordType,
             predicate: NSPredicate(format: "pairID == %@ AND status == %@", pairID, CompanionRequest.Status.pending.rawValue),
             subscriptionID: subscriptionID, options: .firesOnRecordCreation)
@@ -129,32 +135,11 @@ final class CompanionCloudStore {
         info.desiredKeys = ["requestID"]
         info.shouldSendMutableContent = true
         query.notificationInfo = info
-        let removedIDs = existing.filter {
-            $0.subscriptionID.hasPrefix("phone-approvals-") && $0.subscriptionID != subscriptionID
-        }.map(\.subscriptionID)
-        let result = try await database.modifySubscriptions(saving: [query], deleting: removedIDs)
-        guard let saved = result.saveResults[subscriptionID] else {
-            throw CompanionError.message("iCloud did not enable approval notifications. Try again.")
-        }
-        _ = try saved.get()
-        for id in removedIDs {
-            guard let deleted = result.deleteResults[id] else {
-                throw CompanionError.message("iCloud did not remove the previous approval notifications. Try again.")
-            }
-            try deleted.get()
-        }
+        try await save(query)
     }
 
-    func removeSubscriptions() async throws {
-        let existing = try await database.allSubscriptions()
-        let ids = existing.filter { $0.subscriptionID.hasPrefix("phone-approvals-") }.map(\.subscriptionID)
-        guard !ids.isEmpty else { return }
-        let result = try await database.modifySubscriptions(saving: [], deleting: ids)
-        for id in ids {
-            guard let deleted = result.deleteResults[id] else {
-                throw CompanionError.message("iCloud did not remove approval notifications. Try again.")
-            }
-            try deleted.get()
-        }
+    func removeSubscription(pairID: String) async throws {
+        do { _ = try await database.deleteSubscription(withID: Self.phoneSubscriptionID(pairID: pairID)) }
+        catch let error as CKError where error.code == .unknownItem { }
     }
 }

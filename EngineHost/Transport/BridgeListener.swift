@@ -7,19 +7,26 @@ final class BridgeListener {
     private struct Client {
         let connection: NWConnection
         var opened = false
+        var authenticationDeadline: Task<Void, Never>?
     }
 
     private let onOpen: @MainActor (String) -> Void
     private let onText: @MainActor (String, String) -> Void
     private let onClose: @MainActor (String) -> Void
+    private let connectionLimit: Int
+    private let authenticationTimeout: Duration
     private var listener: NWListener?
     private var startup: CheckedContinuation<UInt16, any Error>?
     private var clients: [String: Client] = [:]
     private var closed = false
 
-    init(onOpen: @escaping @MainActor (String) -> Void,
+    init(connectionLimit: Int = 4, authenticationTimeout: Duration = .seconds(5),
+         onOpen: @escaping @MainActor (String) -> Void,
          onText: @escaping @MainActor (String, String) -> Void,
          onClose: @escaping @MainActor (String) -> Void) {
+        precondition(connectionLimit > 0 && authenticationTimeout > .zero)
+        self.connectionLimit = connectionLimit
+        self.authenticationTimeout = authenticationTimeout
         self.onOpen = onOpen
         self.onText = onText
         self.onClose = onClose
@@ -38,7 +45,10 @@ final class BridgeListener {
         let listener = try NWListener(using: parameters, on: .any)
         self.listener = listener
         listener.newConnectionHandler = { [weak self] connection in
-            MainActor.assumeIsolated { self?.accept(connection) }
+            MainActor.assumeIsolated {
+                guard let self else { connection.cancel(); return }
+                self.accept(connection)
+            }
         }
         listener.stateUpdateHandler = { [weak self] state in
             MainActor.assumeIsolated { self?.stateChanged(state) }
@@ -66,8 +76,16 @@ final class BridgeListener {
         })
     }
 
+    // SessionScript calls this only after validating the current browser token.
+    func authenticated(id: String) {
+        guard let client = clients[id], client.opened else { return }
+        clients[id]?.authenticationDeadline = nil
+        client.authenticationDeadline?.cancel()
+    }
+
     func disconnect(id: String) {
         guard let client = clients.removeValue(forKey: id) else { return }
+        client.authenticationDeadline?.cancel()
         client.connection.cancel()
         if client.opened { onClose(id) }
     }
@@ -101,9 +119,17 @@ final class BridgeListener {
     }
 
     private func accept(_ connection: NWConnection) {
-        guard !closed else { connection.cancel(); return }
+        guard !closed, clients.count < connectionLimit else { connection.cancel(); return }
         let id = UUID().uuidString
-        clients[id] = Client(connection: connection)
+        // Start before the WebSocket upgrade, so an incomplete HTTP handshake
+        // cannot retain a connection without reaching SessionScript's token check.
+        let expires = ContinuousClock.now + authenticationTimeout
+        let deadline = Task { [weak self] in
+            do { try await Task.sleep(until: expires, clock: .continuous) } catch { return }
+            guard !Task.isCancelled else { return }
+            self?.disconnect(id: id)
+        }
+        clients[id] = Client(connection: connection, authenticationDeadline: deadline)
         connection.stateUpdateHandler = { [weak self] state in
             MainActor.assumeIsolated {
                 guard let self, let client = self.clients[id] else { return }

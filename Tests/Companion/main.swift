@@ -78,6 +78,10 @@ rejects("a forged Mac request") {
 }
 
 let code = try CompanionProtocol.pairingCode(from: "abcd-efgh-jkmn")
+expect(CompanionCloudStore.phoneSubscriptionID(pairID: "old-pair") == "phone-approvals-old-pair",
+       "The subscription ID must select exactly the supplied pair")
+expect(CompanionCloudStore.phoneSubscriptionID(pairID: "old-pair") != CompanionCloudStore.phoneSubscriptionID(pairID: "new-pair"),
+       "Different pairs must not share notification subscriptions")
 expect(code == "ABCDEFGHJKMN", "Manual codes must accept lowercase and separators")
 let scannedCode = try CompanionProtocol.pairingCode(from: "passtrami://pair?code=ABCD-EFGH-JKMN")
 expect(scannedCode == code, "QR URL and manual entry must agree")
@@ -275,4 +279,33 @@ func checkRecordConflictRetries() async throws {
 }
 
 try await checkRecordConflictRetries()
-print("Companion checks passed: pairing binding, signatures, expiry, replay rejection, atomic conflict recovery, fresh-state validation, retry limits, and cancellation")
+
+@MainActor
+func checkSubscriptionRefreshRace() async throws {
+    // An old phone has already read pair A. Pair B is created before A subscribes.
+    let oldPairID = "old-pair"
+    let newID = CompanionCloudStore.phoneSubscriptionID(pairID: "new-pair")
+    let macID = CompanionCloudStore.macSubscriptionID
+    var serverIDs: Set<String> = [newID, macID]
+    var savedIDs: [String] = []
+    try await CompanionCloudStore.savePhoneSubscription(pairID: oldPairID) { subscription in
+        guard let query = subscription as? CKQuerySubscription else { preconditionFailure("Missing approval query") }
+        expect(query.subscriptionID == CompanionCloudStore.phoneSubscriptionID(pairID: oldPairID),
+               "A stale refresh may save only its requested pair subscription")
+        savedIDs.append(query.subscriptionID)
+        serverIDs.insert(query.subscriptionID)
+    }
+    expect(savedIDs.count == 1, "Subscription setup must perform one save")
+    expect(serverIDs.contains(newID) && serverIDs.contains(macID),
+           "A stale refresh must preserve the newer phone and Mac subscriptions")
+    expect(serverIDs.count == 3, "The stale save must not remove other subscriptions")
+
+    await rejectsAsync("a failed subscription save", matching: { ($0 as? CKError)?.code == .networkFailure }) {
+        try await CompanionCloudStore.savePhoneSubscription(pairID: oldPairID) { _ in
+            throw CKError(.networkFailure)
+        }
+    }
+}
+
+try await checkSubscriptionRefreshRace()
+print("Companion checks passed: pairing binding, signatures, expiry, replay rejection, atomic conflict recovery, fresh-state validation, retry limits, cancellation, and stale subscription refresh")

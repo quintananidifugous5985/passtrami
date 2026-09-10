@@ -140,6 +140,7 @@ final class JavaScriptEngine {
         case "send":
             if let text = message["text"] as? String { bridge?.send(id: connection, text: text) }
         case "disconnect": bridge?.disconnect(id: connection)
+        case "bridgeAuthenticated": bridge?.authenticated(id: connection)
         case "reply":
             if let text = message["text"] as? String {
                 if connection.hasPrefix("mcp:") {

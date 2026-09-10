@@ -81,9 +81,7 @@
   function disconnectBridges() {
     const oldBridge = bridge; bridge = null; nativeState = '';
     if (oldBridge) post({ op: 'disconnect', connection: oldBridge });
-    for (const [id, candidate] of candidates) {
-      cancelTimer(candidate.timer); post({ op: 'disconnect', connection: id });
-    }
+    for (const id of candidates.keys()) post({ op: 'disconnect', connection: id });
     candidates.clear();
   }
   function beginChallenge() {
@@ -288,7 +286,8 @@
       if (!candidate || !token || candidate.generation !== generation || message.token !== token || bridge) {
         post({ op: 'disconnect', connection: id }); return;
       }
-      cancelTimer(candidate.timer); candidates.delete(id); bridge = id; return;
+      candidates.delete(id); bridge = id;
+      post({ op: 'bridgeAuthenticated', connection: id }); return;
     }
     if (message.type === 'nativeState' && typeof message.state === 'string') stateChanged(message.state);
     else if (pending && message.id === pending.id) {
@@ -319,11 +318,10 @@
       case 'request': receiveRequest(event.connection, event.text); break;
       case 'clientClosed': clients.get(event.connection)?.cancel(); break;
       case 'bridgeOpen':
-        candidates.set(event.connection, { generation, timer: later(() => post({ op: 'disconnect', connection: event.connection }), 5000) }); break;
+        candidates.set(event.connection, { generation }); break;
       case 'bridgeText': receiveBridge(event.connection, event.text); break;
       case 'bridgeClosed': {
-        const candidate = candidates.get(event.connection);
-        if (candidate) { cancelTimer(candidate.timer); candidates.delete(event.connection); }
+        candidates.delete(event.connection);
         if (bridge === event.connection) void lock(new RequestError('locked', 'The password session closed.'));
         break;
       }
