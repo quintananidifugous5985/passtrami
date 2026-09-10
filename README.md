@@ -12,16 +12,9 @@ Apple Passwords for AI agents.
 
 Passtrami builds on [APW](https://github.com/bendews/apw), with a macOS interface for setup and daily use. Its MCP design takes inspiration from [1Password’s Environments MCP server](https://www.1password.dev/environments/mcp-server): send passwords to the program that needs them without putting them in MCP responses.
 
-## Setup
+## MCP
 
-1. Unzip the download, move Passtrami to `/Applications`, and open it.
-2. Wait for Chromium to download, then enter the six-digit code shown by macOS.
-3. In **Settings → Tools → MCP**, enable MCP and select **Copy Configuration**.
-4. Add the configuration to your agent’s MCP settings. CLI installation is not required.
-
-Passwords travel through a one-use local pipe. The consuming program must not print or log them. See [MCP access](docs/mcp.md) for details and limits.
-
-Launch at Login and automatic app updates are on by default.
+Enable MCP in **Settings → Tools**, select **Copy Configuration**, and add it to your agent’s MCP settings. See [MCP access](docs/mcp.md) for details.
 
 ## Command line
 
