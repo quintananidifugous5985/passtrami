@@ -41,7 +41,10 @@ expiry = profile.get('ExpirationDate')
 require(expiry is not None and expiry.replace(tzinfo=timezone.utc) > datetime.now(timezone.utc), 'has expired.')
 required = plistlib.loads(Path('Passtrami.entitlements').read_bytes())
 for key in ('com.apple.developer.icloud-container-identifiers', 'com.apple.developer.icloud-services'):
-    require(set(required[key]).issubset(entitlements.get(key, [])), 'does not include the required CloudKit capability or container.')
+    granted = entitlements.get(key, [])
+    # Apple grants all iCloud services with a string wildcard in Developer ID profiles.
+    all_services = key == 'com.apple.developer.icloud-services' and granted == '*'
+    require(all_services or set(required[key]).issubset(granted), 'does not include the required CloudKit capability or container.')
 environment = entitlements.get('com.apple.developer.icloud-container-environment')
 require(environment == 'Production' or isinstance(environment, list) and 'Production' in environment,
         'does not allow Production CloudKit.')
