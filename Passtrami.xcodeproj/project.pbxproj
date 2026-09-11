@@ -16,7 +16,7 @@
 		C0441DB286B53455787986DC /* Bundle+DisplayName.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74585DC261A8E755E41F14C1 /* Bundle+DisplayName.swift */; };
 		C3492C30EFC8EF7CFBC941BE /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = A1F139CC6E6255ACF70FAB05 /* MCP */; };
 		CC0648779E7A4B5F901E21A1 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = CC0648779E7A4B5F901E21A2 /* Sparkle */; };
-		E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802A56FBF9D7D8AF4A769C73 /* Harness.swift */; };
+		E8B4A1D12E1E6328383A7D1E /* Tests/MCP/Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = 802A56FBF9D7D8AF4A769C73 /* Tests/MCP/Harness.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -95,7 +95,7 @@
 		74585DC261A8E755E41F14C1 /* Bundle+DisplayName.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "Bundle+DisplayName.swift"; path = "App/Bundle+DisplayName.swift"; sourceTree = "<group>"; };
 		7B49052207EC92AAFB9E1CAC /* PasstramiCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = PasstramiCompanion.app; path = Passtrami.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7FE6811E743DE5CC922F8867 /* PasstramiCLI */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiCLI; path = passtrami; sourceTree = BUILT_PRODUCTS_DIR; };
-		802A56FBF9D7D8AF4A769C73 /* Harness.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/MCP/Harness.swift; sourceTree = SOURCE_ROOT; };
+		802A56FBF9D7D8AF4A769C73 /* Tests/MCP/Harness.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Tests/MCP/Harness.swift; sourceTree = SOURCE_ROOT; };
 		B4710E9398C8906FECD1912E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiMCP; path = "passtrami-mcp"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB93E85E385AB11CEDE6E577 /* PasstramiMCPTests */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = text; name = PasstramiMCPTests; path = "passtrami-mcp-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -139,50 +139,36 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0B4FFC526A61A1A8D5846300 /* docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = docs;
 			sourceTree = "<group>";
 		};
 		125777AB9613392B6AC02548 /* EngineHost */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = EngineHost;
 			sourceTree = "<group>";
 		};
 		1CCAD66A4B668FEEB19D5AE6 /* MCP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = MCP;
 			sourceTree = "<group>";
 		};
 		1D3FB38E8B39D75234F62B6F /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Shared;
 			sourceTree = "<group>";
 		};
 		277E4202639A8AFC1E65CFE8 /* Resources */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
 		6E5FBFFB187A8BD3A27DEE10 /* Engine */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Engine;
 			sourceTree = "<group>";
 		};
 		7E4F0DA256D1000B91C2A6A2 /* CLI */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CLI;
 			sourceTree = "<group>";
 		};
@@ -205,36 +191,26 @@
 		};
 		9D6EEFFECD5053C98768ED1D /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = App;
 			sourceTree = "<group>";
 		};
 		A810734D4F22BD85D4808402 /* Assets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Assets;
 			sourceTree = "<group>";
 		};
 		B092B14A287035E633107DF7 /* scripts */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = scripts;
 			sourceTree = "<group>";
 		};
 		C9458214625DDC4F9CC78016 /* Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Tests;
 			sourceTree = "<group>";
 		};
 		D5E9C4D3C7B3F3E3A860CD71 /* Vendor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Vendor;
 			sourceTree = "<group>";
 		};
@@ -302,7 +278,7 @@
 		5CB8F1F13051BEA1005551C5 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				802A56FBF9D7D8AF4A769C73 /* Harness.swift */,
+				802A56FBF9D7D8AF4A769C73 /* Tests/MCP/Harness.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -667,7 +643,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E8B4A1D12E1E6328383A7D1E /* Harness.swift in Sources */,
+				E8B4A1D12E1E6328383A7D1E /* Tests/MCP/Harness.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
