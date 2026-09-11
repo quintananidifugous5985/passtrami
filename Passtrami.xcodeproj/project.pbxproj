@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E99460794E6140999587ED21 /* FullDiskAccessCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B1A6A8D7764E8E80CC05D4 /* FullDiskAccessCheck.swift */; };
 		2FA09820DBF6A972F4A46EAC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 10D404B2C37BC90BFDFE06AB /* Foundation.framework */; };
 		3B86DA2DF8D7141482E702A2 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 6086BAF2C1AD43519A16AB5A /* MCP */; };
 		5369FAAF6A01C8682C47A10E /* PasstramiMCP in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = C1AEE46C19B149E24D4EABA8 /* PasstramiMCP */; };
@@ -88,6 +89,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		84B1A6A8D7764E8E80CC05D4 /* FullDiskAccessCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/FullDiskAccessCheck.swift; sourceTree = SOURCE_ROOT; };
 		029FA881CCD882486E5A92AC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		10D404B2C37BC90BFDFE06AB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3FB652E141AC901698F634B2 /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
@@ -286,6 +288,7 @@
 		8D4C14C33AD6A0093C0F2E92 = {
 			isa = PBXGroup;
 			children = (
+				84B1A6A8D7764E8E80CC05D4 /* FullDiskAccessCheck.swift */,
 				029FA881CCD882486E5A92AC /* Info.plist */,
 				3FB652E141AC901698F634B2 /* LICENSE */,
 				B4710E9398C8906FECD1912E /* README.md */,
@@ -672,6 +675,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E99460794E6140999587ED21 /* FullDiskAccessCheck.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

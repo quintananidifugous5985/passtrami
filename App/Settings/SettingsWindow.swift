@@ -11,6 +11,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
     private let didClose: () -> Void
 
     init(launchAtLogin: LaunchAtLoginController, updates: ApplicationUpdates, browserRuntime: BrowserRuntimeModel,
+         fullDiskAccess: FullDiskAccessModel,
          companion: CompanionService,
          onMCPChange: @escaping (Bool) -> Void,
          didClose: @escaping () -> Void) {
@@ -38,7 +39,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate {
         super.init(window: window)
         window.delegate = self
         window.contentViewController = NSHostingController(rootView: SettingsView(
-            model: model, updates: updates, browserRuntime: browserRuntime, companion: companion,
+            model: model, updates: updates, browserRuntime: browserRuntime, fullDiskAccess: fullDiskAccess, companion: companion,
             onContentHeightChange: { [weak self] height in self?.fitContent(height: height) }
         ))
     }

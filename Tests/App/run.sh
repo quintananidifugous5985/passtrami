@@ -8,6 +8,7 @@ minimum_macos=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' Info.
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   -target "arm64-apple-macos$minimum_macos" \
   App/Settings/CLIInstaller.swift App/Bundle+DisplayName.swift App/MCPSettings.swift \
-  App/BrowserRuntimeStatus.swift App/EngineProcess.swift Tests/App/main.swift \
+  App/BrowserRuntimeStatus.swift App/FullDiskAccessCheck.swift App/FullDiskAccessModel.swift App/EngineProcess.swift Tests/App/main.swift \
   -o "$test_directory/tests"
 "$test_directory/tests"
+Tests/EngineProcess/run.sh

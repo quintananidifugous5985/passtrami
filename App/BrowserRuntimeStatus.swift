@@ -31,8 +31,12 @@ final class BrowserRuntimeModel {
     }
 
     func serviceFailed(_ message: String) {
-        guard status.phase != .ready else { return }
+        guard status.phase.isBusy else { return }
         status = BrowserRuntimeStatus(phase: .failed, message: message)
+    }
+
+    func pauseSetup() {
+        if status.phase.isBusy { status = BrowserRuntimeStatus(phase: .idle) }
     }
 
     func revealInFinder() {

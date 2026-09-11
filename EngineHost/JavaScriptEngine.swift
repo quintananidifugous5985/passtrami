@@ -33,6 +33,7 @@ final class JavaScriptEngine {
     }
 
     func start() async throws {
+        try requireFullDiskAccess()
         try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectory.path)
@@ -161,6 +162,7 @@ final class JavaScriptEngine {
             startup = Task { [weak self] in
                 guard let self else { return }
                 do {
+                    try requireFullDiskAccess()
                     do { try await passwordAccess.recover(requireEnabled: phoneApprovalRequired) }
                     catch {
                         throw EngineFailure("password_access", "Could not restore the password approval setting. Select Unlock to retry.")
@@ -172,6 +174,7 @@ final class JavaScriptEngine {
                             self?.deliver(["type": "progress", "token": token, "message": message])
                         }
                     }
+                    try requireFullDiskAccess()
                     let session = try await BrowserSession.start(executable: executable, resources: resources,
                         dataDirectory: dataDirectory, port: port, token: token) { [weak self] in
                             self?.deliver(["type": "browserExited", "token": token])
@@ -193,6 +196,19 @@ final class JavaScriptEngine {
             }
         case "shutdown": Task { await shutdown(exitCode: 0) }
         default: break
+        }
+    }
+
+    private func requireFullDiskAccess() throws {
+        switch FullDiskAccessCheck.checkRequiredLocation() {
+        case .available:
+            return
+        case .required:
+            throw EngineFailure("full_disk_access", "Full Disk Access is required. Open Settings to continue.")
+        case .missingPreferences:
+            throw EngineFailure("full_disk_access", "Apple Passwords settings are missing. Open Safari once, then retry setup.")
+        case .unavailable:
+            throw EngineFailure("full_disk_access", "Apple Passwords settings are unavailable. Open Settings to continue.")
         }
     }
 

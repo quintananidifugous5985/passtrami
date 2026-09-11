@@ -1,34 +1,28 @@
 import SwiftUI
 
-struct ComponentsSettingsSection: View {
+struct ChromiumSettingsRow: View {
     let model: BrowserRuntimeModel
+    let accessAvailable: Bool
 
     var body: some View {
-        Section {
-            HStack(spacing: 16) {
-                HStack(spacing: 4) {
-                    Text("Chromium")
-                    if model.status.phase == .ready {
-                        Button("Reveal in Finder", systemImage: "arrow.up.right.square.fill", action: model.revealInFinder)
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.plain)
-                            .controlSize(.mini)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .help("Reveal in Finder")
-                    }
+        HStack(spacing: 16) {
+            HStack(spacing: 4) {
+                Text("Chromium")
+                if accessAvailable && model.status.phase == .ready {
+                    Button("Reveal in Finder", systemImage: "arrow.up.right.square.fill", action: model.revealInFinder)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .controlSize(.mini)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .help("Reveal in Finder")
                 }
-                Spacer(minLength: 16)
-                ChromiumStatusControl(status: model.status, download: model.download)
             }
-        } header: {
-            Text("Components")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                if model.status.phase == .failed, let message = model.status.message {
-                    Text(message)
-                }
-                Text("\(Bundle.main.displayName) uses the Chromium runtime to connect securely to Apple Passwords, just like Apple’s iCloud Passwords extension.")
+            Spacer(minLength: 16)
+            if accessAvailable {
+                ChromiumStatusControl(status: model.status, download: model.download)
+            } else {
+                Text("Waiting for access").foregroundStyle(.secondary)
             }
         }
     }

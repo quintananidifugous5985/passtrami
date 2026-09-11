@@ -4,6 +4,7 @@ struct SettingsView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
     let browserRuntime: BrowserRuntimeModel
+    let fullDiskAccess: FullDiskAccessModel
     let companion: CompanionService
     let onContentHeightChange: (CGFloat) -> Void
     @AppStorage("settingsPane") private var selectedPane: SettingsPane = .general
@@ -22,7 +23,7 @@ struct SettingsView: View {
         } detail: {
             ZStack {
                 ForEach(SettingsPane.allCases) { pane in
-                    SettingsDetailView(pane: pane, model: model, updates: updates, browserRuntime: browserRuntime,
+                    SettingsDetailView(pane: pane, model: model, updates: updates, browserRuntime: browserRuntime, fullDiskAccess: fullDiskAccess,
                                        companion: companion) { height in
                         paneHeights[pane] = height
                     }
@@ -60,6 +61,7 @@ private struct SettingsDetailView: View {
     let model: SettingsModel
     let updates: ApplicationUpdates
     let browserRuntime: BrowserRuntimeModel
+    let fullDiskAccess: FullDiskAccessModel
     let companion: CompanionService
     let onHeightChange: (CGFloat) -> Void
 
@@ -68,7 +70,7 @@ private struct SettingsDetailView: View {
             switch pane {
             case .general:
                 StartupSettingsSection(model: model)
-                ComponentsSettingsSection(model: browserRuntime)
+                SetupSettingsSection(model: fullDiskAccess, browserRuntime: browserRuntime)
             case .tools:
                 CommandLineSettingsSection(model: model)
                 MCPSettingsSection(model: model)
@@ -81,6 +83,7 @@ private struct SettingsDetailView: View {
         }
         .formStyle(.grouped)
         .animation(.easeInOut(duration: 0.25), value: model.mcpEnabled)
+        .animation(.easeInOut(duration: 0.25), value: fullDiskAccess.status)
         .animation(.easeInOut(duration: 0.25), value: companion.pairedDevice?.id)
         .animation(.easeInOut(duration: 0.25), value: companion.pairingCode)
         .labeledContentStyle(CenteredLabeledContentStyle())

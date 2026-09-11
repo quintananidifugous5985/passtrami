@@ -9,11 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let pinWindow = PINWindow()
     private let launchAtLogin = LaunchAtLoginController()
     private let browserRuntime = BrowserRuntimeModel()
+    private let fullDiskAccess = FullDiskAccessModel()
     private let companion = CompanionService(role: .mac)
     private var approvalTasks: [String: Task<Void, Never>] = [:]
     private lazy var updates = ApplicationUpdates()
     private var isSettingsVisible = false
-    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, browserRuntime: browserRuntime, companion: companion, onMCPChange: { [weak self] enabled in
+    private lazy var settings = SettingsWindow(launchAtLogin: launchAtLogin, updates: updates, browserRuntime: browserRuntime, fullDiskAccess: fullDiskAccess, companion: companion, onMCPChange: { [weak self] enabled in
         self?.engine.setMCPEnabled(enabled)
     }) { [weak self] in
         self?.isSettingsVisible = false
@@ -24,10 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let lockItem = NSMenuItem(title: "Lock", action: nil, keyEquivalent: "")
     private var firstLockedEventHandled = false
     private var shutdownTask: Task<Void, Never>?
+    private var accessShutdownTask: Task<Void, Never>?
+    private var didFinishLaunching = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         launchAtLogin.applyInitialDefaultIfNeeded()
         createMenu()
+        fullDiskAccess.onCheckAgain = { [weak self] in self?.startEngine() }
         updates.onVisibilityChange = { [weak self] in self?.updateActivationPolicy() }
         engine.onEvent = { [weak self] event in self?.handle(event) }
         companion.onApprovalPolicyChange = { [weak self] required in
@@ -38,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.registerForRemoteNotifications()
         browserRuntime.onDownload = { [weak self] in
             guard let self else { return }
-            if !engine.isRunning { startEngine() }
+            guard startEngine() else { return }
             engine.send("prepareBrowser")
         }
         pinWindow.onSubmit = { [weak self] pin in self?.engine.send("pin", pin: pin) }
@@ -48,7 +52,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showSettings()
             UserDefaults.standard.set(true, forKey: "didShowInitialSettings")
         }
+        didFinishLaunching = true
         startEngine()
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard didFinishLaunching, shutdownTask == nil else { return }
+        let wasAvailable = fullDiskAccess.status == .available
+        if fullDiskAccess.refresh() {
+            if !wasAvailable { startEngine() }
+        } else if wasAvailable {
+            stopEngineForAccess()
+            showAccessSettings()
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -110,9 +126,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = mainMenu
     }
 
-    private func startEngine() {
-        do { try engine.start(phoneApprovalRequired: companion.requiresPhoneApproval) }
-        catch { handle(EngineEvent(type: "state", state: .error, message: "Could not start the password service.")) }
+    @discardableResult
+    private func startEngine() -> Bool {
+        guard fullDiskAccess.refresh() else {
+            stopEngineForAccess()
+            showAccessSettings()
+            return false
+        }
+        guard shutdownTask == nil, accessShutdownTask == nil else { return false }
+        if engine.isRunning { return true }
+        do {
+            try engine.start(phoneApprovalRequired: companion.requiresPhoneApproval)
+            return true
+        } catch {
+            handle(EngineEvent(type: "state", state: .error, message: "Could not start the password service."))
+            return false
+        }
+    }
+
+    private func stopEngineForAccess() {
+        cancelDeviceApprovals()
+        pinWindow.dismiss()
+        browserRuntime.pauseSetup()
+        guard engine.isRunning, accessShutdownTask == nil, shutdownTask == nil else { return }
+        accessShutdownTask = Task { [weak self] in
+            guard let self else { return }
+            await engine.shutdown()
+            accessShutdownTask = nil
+            if shutdownTask == nil, fullDiskAccess.refresh() { startEngine() }
+        }
+    }
+
+    private func showAccessSettings() {
+        updateMenu(.error, message: fullDiskAccess.status == .required
+                   ? "Full Disk Access is required. Open Settings to continue."
+                   : "Apple Passwords settings are unavailable. Open Settings to continue.")
+        UserDefaults.standard.set(SettingsPane.general.rawValue, forKey: "settingsPane")
+        showSettings()
     }
 
     private func handle(_ event: EngineEvent) {
@@ -131,6 +181,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let state = event.state else { return }
             if state == .error {
                 cancelDeviceApprovals()
+                if !fullDiskAccess.refresh() {
+                    stopEngineForAccess()
+                    showAccessSettings()
+                    return
+                }
                 browserRuntime.serviceFailed(event.message ?? "The password service stopped. Try again.")
             }
             updateMenu(state, message: event.message)
@@ -166,7 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func unlock() {
-        if !engine.isRunning { startEngine() }
+        guard startEngine() else { return }
         engine.send("unlock")
     }
 
@@ -220,7 +275,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pinWindow.dismiss()
         cancelDeviceApprovals()
         companion.stop()
+        let pendingAccessShutdown = accessShutdownTask
         shutdownTask = Task { [engine] in
+            await pendingAccessShutdown?.value
             await engine.shutdown()
             NSApp.reply(toApplicationShouldTerminate: true)
         }

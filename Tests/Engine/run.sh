@@ -7,5 +7,5 @@ sources=(EngineHost/**/*.swift)
 sources=(${sources:#EngineHost/main.swift})
 xcrun swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
   -target arm64-apple-macos26.2 -framework JavaScriptCore -framework Network \
-  "${sources[@]}" Tests/Engine/*.swift -o "$test_dir/tests"
+  "${sources[@]}" App/FullDiskAccessCheck.swift Tests/Engine/*.swift -o "$test_dir/tests"
 "$test_dir/tests"

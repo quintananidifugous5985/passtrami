@@ -69,6 +69,8 @@ expect(MCPSettings(defaults: defaults).isEnabled, "MCP enable choice must persis
 mcpSettings.isEnabled = false
 expect(!MCPSettings(defaults: defaults).isEnabled, "MCP disable choice must persist")
 let browserModel = BrowserRuntimeModel()
+browserModel.serviceFailed("Full Disk Access is required.")
+expect(browserModel.status.phase == .idle, "A failure before Chromium setup must not become a download error")
 var downloadRequests = 0
 browserModel.onDownload = { downloadRequests += 1 }
 browserModel.download()
@@ -90,4 +92,30 @@ browserModel.download()
 expect(browserModel.status.phase == .ready && browserModel.status.appPath == "/test/Chromium.app",
        "Password session failure must not lose the installed runtime")
 expect(downloadRequests == 2, "Installed runtime must not be downloaded again from Settings")
-print("App tests passed: CLI installer, bundle name, MCP settings, and Chromium download state")
+browserModel.pauseSetup()
+expect(browserModel.status.phase == .ready, "Losing access must preserve installed runtime status")
+browserModel.receive(BrowserRuntimeStatus(phase: .downloading, fraction: 0.5))
+browserModel.pauseSetup()
+expect(browserModel.status.phase == .idle, "Losing access must clear interrupted download progress")
+var accessStatus = FullDiskAccessModel.Status.required
+let access = FullDiskAccessModel(check: { accessStatus })
+expect(!access.refresh(), "Missing access must block setup")
+accessStatus = .available
+expect(access.refresh(), "Setup can continue after access is granted")
+accessStatus = .required
+expect(!access.refresh(), "Access must be checked again after revocation")
+accessStatus = .unavailable
+expect(!access.refresh() && access.status == .unavailable, "Other errors must not be reported as permission denial")
+expect(FullDiskAccessCheck.isAccessDenied(NSError(domain: NSPOSIXErrorDomain, code: Int(EPERM))), "TCC denial must request access")
+expect(!FullDiskAccessCheck.isAccessDenied(NSError(domain: NSPOSIXErrorDomain, code: Int(EIO))), "I/O errors must not request permission")
+expect(FullDiskAccessCheck.checkRequiredLocation(home: home) == .missingPreferences, "Missing storage must have its own recovery guidance")
+let preferences = home.appendingPathComponent("Library/Containers/com.apple.Safari/Data/Library/Preferences")
+try manager.createDirectory(at: preferences, withIntermediateDirectories: true)
+expect(FullDiskAccessCheck.checkRequiredLocation(home: home) == .available, "An accessible preferences directory permits an absent preference file")
+let safariPreferences = preferences.appendingPathComponent("com.apple.Safari.plist")
+let originalPreferences = Data("unchanged settings".utf8)
+try originalPreferences.write(to: safariPreferences)
+expect(FullDiskAccessCheck.checkRequiredLocation(home: home) == .available, "Check actual preference file access")
+let checkedPreferences = try Data(contentsOf: safariPreferences)
+expect(checkedPreferences == originalPreferences, "Permission checks must not change preferences")
+print("App tests passed: CLI installer, bundle name, MCP settings, Chromium state, and access checks")
